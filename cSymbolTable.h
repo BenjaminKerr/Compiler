@@ -4,11 +4,21 @@
 // described functionality
 //
 
+#ifndef CSYMBOLTABLE_H
+#define CSYMBOLTABLE_H
+
+#include <string>
+#include <vector>
+#include <unordered_map>
+
+class cSymbol;
 // NOTE: The following typedef will have to be replaced by something meaningful
 typedef void symbolTable_t;
 
 class cSymbolTable
 {
+    private:
+        std::vector<std::unordered_map<std::string, cSymbol*>> m_scopes;
     public:
         // Construct an empty symbol table
         cSymbolTable();
@@ -33,13 +43,14 @@ class cSymbolTable
         // a match is found.
         // Return the symbol for the inner-most match. 
         // Returns nullptr if no match is found.
-        cSymbol *Find(string name);
+        cSymbol *Find(std::string name);
 
         // Find a symbol in the inner-most scope.
         // NOTE: This ONLY searches the inner-most scope.
         // Returns nullptr if the symbol is not found.
-        cSymbol *FindLocal(string name);
+        cSymbol *FindLocal(std::string name);
 };
 
 // declare the global symbol table. The definition will have to be in a cpp file
 extern cSymbolTable g_symbolTable;
+#endif
