@@ -1,28 +1,23 @@
-#**************************************
-# Makefile
+##############################################
+# Makefile for CST320 labs
 #
-# Makefile for lang compiler
-#
-# Author: Phil Howard 
+# Author: Philip Howard
 # phil.howard@oit.edu
 #
-# Date: Jan. 12, 2016
+# Nov. 24, 2015
 #
 
-COPTS=-Wall -g -c -O0 -std=c++11
+COPTS=-Wall -g -c  -O0
 OBJS=main.o \
 	 langlex.o \
-	 cSymbolTable.o
 
 all: lang
 
 clean:
 	rm -f $(OBJS)
-	rm -f *.o
 	rm -f langlex.c
 	rm -f lang
-	rm -f out.xml
-	rm -f out2.xml
+	rm -f out
 
 .c.o:
 	g++ $(COPTS) $? -o $@
@@ -33,15 +28,11 @@ clean:
 main.o: main.cpp langlex.c 
 	g++ $(COPTS) main.cpp -o main.o
 
-cSymbolTable.o: cSymbolTable.cpp cSymbolTable.h
-	g++ $(COPTS) cSymbolTable.cpp -o cSymbolTable.o
-
 langlex.c: lang.l
 	flex -o langlex.c lang.l
 
 langlex.o: langlex.c
 	g++ $(COPTS) -Wno-sign-compare $? -o $@
-
 lang: $(OBJS)
 	g++ $(OBJS) -o lang
 
