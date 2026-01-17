@@ -9,6 +9,12 @@
 // phil.howard@oit.edu
 //
 
+#define LOCAL       1025   
+#define GLOBAL      1026   
+#define LOOKUP      1027   
+#define INSERT      1028   
+#define OPEN        1029   
+#define CLOSE       1030   
 #define PROGRAM     1000        // program
 #define IF          1001        // if
 #define ELSE        1002        // else

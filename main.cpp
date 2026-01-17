@@ -15,12 +15,22 @@
 #include <stdlib.h>
 #include <iostream>
 #include <fstream>
+#include "cSymbol.h"
+#include "cSymbolTable.h"
 
 #include "lex.h"
+#include "tokens.h"
+
+cSymbolTable g_symbolTable;
+long long cSymbol::nextId = 0;
+yylval_t yylval;    // lexer value
+int g_insert = 1;       // global to indicate that symbols should be
+                            // inserted into the symbol table
+int g_local = 0;         // global to indicate to do local lookups
 
 // Uncomment the following line after integrating your symbol table with
 // your scanner.
-//#define TEST2
+#define TEST2
 
 //****************************************
 // argv[1] contains the file to process
@@ -30,7 +40,11 @@ int main(int argc, char **argv)
     const char *outfile_name;
     int result = 0;
     int token;
+
+    std::cout << "Benjamin Kerr\n";
+
     int do_test2 = 0;
+    
 
     if (argc > 1)
     {
@@ -59,11 +73,53 @@ int main(int argc, char **argv)
         }
     }
 
+    
     if (argc > 3) do_test2 = 1;
 
     token = yylex();
     while (token != 0)
     {
+                // if we found an identifier, print it out
+        if (token == IDENTIFIER) 
+        {
+            cSymbol *sym;
+            if (!g_insert)
+            {
+                if (g_local)
+                    sym = g_symbolTable.FindLocal(yylval.symbol->GetName());
+                else
+                    sym = g_symbolTable.Find(yylval.symbol->GetName());
+
+                if (sym != nullptr) yylval.symbol = sym;
+            }
+
+            // token output is handled by TEST2 printf below
+        }
+        else if (token == LOCAL)
+        {
+            g_local = 1;
+        }
+        else if (token == GLOBAL)
+        {
+            g_local = 0;
+        }
+        else if (token == LOOKUP)
+        {
+            g_insert = 0;
+        }
+        else if (token == INSERT)
+        {
+            g_insert = 1;
+        }
+        else if (token == '{')
+        {
+            g_symbolTable.IncreaseScope();
+        }
+        else if (token == '}')
+        {
+            g_symbolTable.DecreaseScope();
+        }
+
 #ifdef TEST2
         if (do_test2 && token == IDENTIFIER)
             printf("%d:%s:%lld\n", token, yytext, yylval.symbol->GetId());
@@ -82,5 +138,6 @@ int main(int argc, char **argv)
         token = yylex();
     }
 
+    
     return result;
 }
