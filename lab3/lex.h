@@ -8,10 +8,13 @@
 // phil.howard@oit.edu
 //
 
-int yylex();
+// Token definitions
+#define END_TOKEN 256
+#define NUM_TOKEN 257
+#define IDENT_TOKEN 258
 
+int yylex();
 extern char *yytext;
 extern int yylineno;
 extern int yynerrs;
 extern FILE *yyin;
-

@@ -50,6 +50,8 @@ int main(int argc, char **argv)
         }
     }
 
+    std::cout << "Benjamin Kerr\n";
+
     if (FindPROG())
     {
         std::cout << "Found a Program\n";
