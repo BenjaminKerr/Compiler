@@ -1,143 +1,110 @@
 //**************************************
 // main.cpp
 //
-// main routine for lang compiler.
-// This version only runs the lexer
+// Main function for lang compiler
 //
 // Author: Phil Howard 
-// phil.howard@oit.edu
-//
-// Date: Nov. 23, 2015
 //
 
-#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <iostream>
 #include <fstream>
-#include "cSymbol.h"
-#include "cSymbolTable.h"
-
 #include "lex.h"
-#include "tokens.h"
+#include "astnodes.h"
+#include "langparse.h"
+#include "cSymbolTable.h"
+#include <map>
 
+extern std::map<std::string, cSymbol*> g_typeSymbols;
+
+// define global variables
 cSymbolTable g_symbolTable;
-long long cSymbol::nextId = 0;
-yylval_t yylval;    // lexer value
-int g_insert = 1;       // global to indicate that symbols should be
-                            // inserted into the symbol table
-int g_local = 0;         // global to indicate to do local lookups
+long long cSymbol::nextId;
 
-// Uncomment the following line after integrating your symbol table with
-// your scanner.
-#define TEST2
-
-//****************************************
-// argv[1] contains the file to process
-// argv[2] if given, contains the name of the output file
+// takes two string args: input_file, and output_file
 int main(int argc, char **argv)
 {
+    std::cout << "Benjamin Kerr" << std::endl;
+
     const char *outfile_name;
     int result = 0;
-    int token;
-
-    std::cout << "Benjamin Kerr\n";
-
-    int do_test2 = 0;
-    
 
     if (argc > 1)
     {
         yyin = fopen(argv[1], "r");
-        if (yyin == NULL)
+        if (yyin == nullptr)
         {
-            std::cerr << "Unable to open file " << argv[1] << "\n";
+            std::cerr << "ERROR: Unable to open file " << argv[1] << "\n";
             exit(-1);
         }
     }
 
+    // Setup the output. If empty, use stdout (which may be redirected)
     if (argc > 2)
     {
         outfile_name = argv[2];
+
         FILE *output = fopen(outfile_name, "w");
-        if (output == NULL)
+        if (output == nullptr)
         {
             std::cerr << "Unable to open output file " << outfile_name << "\n";
             exit(-1);
         }
+
+        // redirect stdout to the output file
         int output_fd = fileno(output);
         if (dup2(output_fd, 1) != 1)
         {
-            std::cerr << "Unable to send output to " << outfile_name << "\n";
-            exit(-2);
+            std::cerr << "Unable configure output stream\n";
+            exit(-1);
         }
     }
 
-    
-    if (argc > 3) do_test2 = 1;
+    // Initialize pre-defined type symbols
+    // Initialize pre-defined type symbols
+    cSymbol *charSym = new cSymbol("char");
+    cBaseTypeNode *charType = new cBaseTypeNode("char", 1, false);
+    charSym->SetDecl(charType);
 
-    token = yylex();
-    while (token != 0)
+    cSymbol *intSym = new cSymbol("int");
+    cBaseTypeNode *intType = new cBaseTypeNode("int", 4, false);
+    intSym->SetDecl(intType);
+
+    cSymbol *floatSym = new cSymbol("float");
+    cBaseTypeNode *floatType = new cBaseTypeNode("float", 4, true);
+    floatSym->SetDecl(floatType);
+
+    cSymbol *longSym = new cSymbol("long");
+    cBaseTypeNode *longType = new cBaseTypeNode("long", 8, false);
+    longSym->SetDecl(longType);
+
+    cSymbol *doubleSym = new cSymbol("double");
+    cBaseTypeNode *doubleType = new cBaseTypeNode("double", 8, true);
+    doubleSym->SetDecl(doubleType);
+
+    g_typeSymbols["char"] = charSym;
+    g_typeSymbols["int"] = intSym;
+    g_typeSymbols["float"] = floatSym;
+    g_typeSymbols["long"] = longSym;
+    g_typeSymbols["double"] = doubleSym;
+    
+    result = yyparse();
+    if (yyast_root != nullptr)
     {
-                // if we found an identifier, print it out
-        if (token == IDENTIFIER) 
+        if (result == 0)
         {
-            cSymbol *sym;
-            if (!g_insert)
-            {
-                if (g_local)
-                    sym = g_symbolTable.FindLocal(yylval.symbol->GetName());
-                else
-                    sym = g_symbolTable.Find(yylval.symbol->GetName());
-
-                if (sym != nullptr) yylval.symbol = sym;
-            }
-
-            // token output is handled by TEST2 printf below
+            std::cout << yyast_root->ToString();
+        } else {
+            std::cout << yynerrs << " Errors in compile\n";
         }
-        else if (token == LOCAL)
-        {
-            g_local = 1;
-        }
-        else if (token == GLOBAL)
-        {
-            g_local = 0;
-        }
-        else if (token == LOOKUP)
-        {
-            g_insert = 0;
-        }
-        else if (token == INSERT)
-        {
-            g_insert = 1;
-        }
-        else if (token == '{')
-        {
-            g_symbolTable.IncreaseScope();
-        }
-        else if (token == '}')
-        {
-            g_symbolTable.DecreaseScope();
-        }
-
-#ifdef TEST2
-        if (do_test2 && token == IDENTIFIER)
-            printf("%d:%s:%lld\n", token, yytext, yylval.symbol->GetId());
-        else
-            printf("%d:%s\n", token, yytext);
-#else
-        if (do_test2)
-        {
-            fprintf(stderr, "Not compiled with TEST2 defined\n");
-            return 0;
-        }
-        else
-            printf("%d:%s\n", token, yytext);
-#endif
-
-        token = yylex();
     }
 
-    
+    if (result == 0 && yylex() != 0)
+    {
+        std::cout << "Junk at end of program\n";
+    }
+
     return result;
 }
