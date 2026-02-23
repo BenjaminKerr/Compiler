@@ -43,4 +43,12 @@ class cVarDeclNode : public cDeclNode
                 return typeSym->GetDecl();
             return nullptr;
         }
+
+        virtual string GetName() 
+        { 
+            cSymbol* nameSym = dynamic_cast<cSymbol*>(GetChild(1));
+            if (nameSym != nullptr)
+                return nameSym->GetName();
+            return "";
+        }
 };

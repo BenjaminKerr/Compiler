@@ -27,7 +27,25 @@ class cBinaryExprNode : public cExprNode
         }
         virtual cDeclNode* GetType() 
         {
-            // Get left and right expression types
+            // Get the operator to check if it's relational/logical
+            cOpNode* opNode = dynamic_cast<cOpNode*>(GetChild(1));
+            if (opNode != nullptr)
+            {
+                int op = opNode->GetOp();
+                
+                // Relational and logical operators ALWAYS return int
+                if (op == EQUALS || op == NOT_EQUALS ||
+                    op == '<' || op == '>' ||
+                    op == LE || op == GE ||
+                    op == AND || op == OR)
+                {
+                    cSymbol* intSym = g_symbolTable.Find("int");
+                    if (intSym != nullptr)
+                        return intSym->GetDecl();
+                }
+            }
+            
+            // For arithmetic operators, use type promotion rules
             cExprNode* left = dynamic_cast<cExprNode*>(GetChild(0));
             cExprNode* right = dynamic_cast<cExprNode*>(GetChild(2));
             
@@ -40,26 +58,28 @@ class cBinaryExprNode : public cExprNode
             if (leftType == nullptr || rightType == nullptr)
                 return nullptr;
             
-            // If either operand is float, result is float
-            if (leftType->IsFloat() || rightType->IsFloat()) {
+            // If either is double, result is double
+            if ((leftType->IsFloat() && leftType->GetSize() == 8) ||
+                (rightType->IsFloat() && rightType->GetSize() == 8))
+            {
+                cSymbol* doubleSym = g_symbolTable.Find("double");
+                if (doubleSym != nullptr)
+                    return doubleSym->GetDecl();
+            }
+            
+            // If either is float, result is float
+            if (leftType->IsFloat() || rightType->IsFloat())
+            {
                 cSymbol* floatSym = g_symbolTable.Find("float");
                 if (floatSym != nullptr)
                     return floatSym->GetDecl();
             }
             
-            // If either is int, result is int
-            if (leftType->IsInt() || rightType->IsInt()) {
-                cSymbol* intSym = g_symbolTable.Find("int");
-                if (intSym != nullptr)
-                    return intSym->GetDecl();
-            }
+            // Both are integers - return the larger type
+            if (leftType->GetSize() >= rightType->GetSize())
+                return leftType;
             
-            // Otherwise return char
-            cSymbol* charSym = g_symbolTable.Find("char");
-            if (charSym != nullptr)
-                return charSym->GetDecl();
-            
-            return nullptr;
+            return rightType;
         }
         virtual string NodeType() { return string("expr"); }
         virtual void Visit(cVisitor *visitor) { visitor->Visit(this); }

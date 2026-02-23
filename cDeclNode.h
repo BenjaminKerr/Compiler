@@ -26,6 +26,7 @@ class cDeclNode : public cAstNode
         virtual bool IsInt()    { return false; }
         virtual bool IsChar()   { return false; }
         virtual int  GetSize()  { return 0; }
+        virtual string GetName() = 0;
 
         // Pure virtual - all decls must define what type they are/have
         virtual cDeclNode* GetType() = 0;
@@ -35,4 +36,21 @@ class cDeclNode : public cAstNode
 
         virtual void Visit(cVisitor *visitor) { visitor->Visit(this); }
         virtual string NodeType() { return string("decl"); }
+
+        bool IsCompatibleWith(cDeclNode *other)
+        {
+            // Same type is always compatible
+            if (this == other) return true;
+
+            // Float/double can accept integers (promotion)
+            if (this->IsFloat() && !other->IsFloat()) return true;
+
+            // Within same category, larger can accept smaller
+            if (this->IsFloat() == other->IsFloat())
+            {
+                if (this->GetSize() >= other->GetSize()) return true;
+            }
+
+            return false;
+        }
 };

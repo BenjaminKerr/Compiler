@@ -26,12 +26,13 @@ class cBaseTypeNode : public cDeclNode
         virtual bool IsInt()   { return !m_isFloat; }
         virtual bool IsChar()  { return (!m_isFloat && m_size==1); }
         virtual bool IsType()  { return true; }
+        virtual string GetName() { return m_name; }
 
         // return the symbol for the type
         virtual cDeclNode *GetType() { return this; }
 
         // return the name of the item that is declared
-        virtual cSymbol*  GetName() 
+        virtual cSymbol*  GetSymbol() 
         { return g_symbolTable.Find(m_name); }
 
         virtual string NodeType() { return "type"; }

@@ -7,9 +7,13 @@
 #include "cVisitor.h"
 #include "astnodes.h"
 
+void cVisitor::VisitAllNodes(cAstNode *node)
+{ node->Visit(this); }
+
 //******************************************
 // All AST node types need a Visit method. 
 // The code for each method is identical: simply visit all children
+void cVisitor::Visit(cAssignNode *node)       { node->VisitAllChildren(this); }
 void cVisitor::Visit(cAstNode *node)          { node->VisitAllChildren(this); }
 void cVisitor::Visit(cBlockNode *node)        { node->VisitAllChildren(this); }
 void cVisitor::Visit(cDeclNode *node)         { node->VisitAllChildren(this); }
@@ -32,3 +36,5 @@ void cVisitor::Visit(cParamsNode *node)       { node->VisitAllChildren(this); }
 void cVisitor::Visit(cFuncDeclNode *node)     { node->VisitAllChildren(this); }
 void cVisitor::Visit(cReturnNode *node)       { node->VisitAllChildren(this); }
 void cVisitor::Visit(cFuncCallNode *node)     { node->VisitAllChildren(this); }
+void cVisitor::Visit(cUnaryExprNode *node)    { node->VisitAllChildren(this); }
+void cVisitor::Visit(cArrayDeclNode *node)    { node->VisitAllChildren(this); }

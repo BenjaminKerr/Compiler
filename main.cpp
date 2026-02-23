@@ -3,9 +3,8 @@
 //
 // Main function for lang compiler
 //
-// Author: Phil Howard 
+// Author: Benjamin Kerr
 //
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -15,7 +14,10 @@
 #include "astnodes.h"
 #include "langparse.h"
 #include "cSymbolTable.h"
+#include "cSemantics.h"
 #include <map>
+
+#define LAB5B
 
 extern std::map<std::string, cSymbol*> g_typeSymbols;
 
@@ -23,11 +25,8 @@ extern std::map<std::string, cSymbol*> g_typeSymbols;
 cSymbolTable g_symbolTable;
 long long cSymbol::nextId;
 
-// takes two string args: input_file, and output_file
 int main(int argc, char **argv)
 {
-    std::cout << "Benjamin Kerr" << std::endl;
-
     const char *outfile_name;
     int result = 0;
 
@@ -41,69 +40,79 @@ int main(int argc, char **argv)
         }
     }
 
-    // Setup the output. If empty, use stdout (which may be redirected)
     if (argc > 2)
     {
         outfile_name = argv[2];
-
         FILE *output = fopen(outfile_name, "w");
         if (output == nullptr)
         {
             std::cerr << "Unable to open output file " << outfile_name << "\n";
             exit(-1);
         }
-
-        // redirect stdout to the output file
         int output_fd = fileno(output);
         if (dup2(output_fd, 1) != 1)
         {
-            std::cerr << "Unable configure output stream\n";
+            std::cerr << "Unable to configure output stream\n";
             exit(-1);
         }
     }
 
     // Initialize pre-defined type symbols
-    // Initialize pre-defined type symbols
     cSymbol *charSym = new cSymbol("char");
     cBaseTypeNode *charType = new cBaseTypeNode("char", 1, false);
     charSym->SetDecl(charType);
+    g_symbolTable.Insert(charSym);  
 
     cSymbol *intSym = new cSymbol("int");
     cBaseTypeNode *intType = new cBaseTypeNode("int", 4, false);
     intSym->SetDecl(intType);
+    g_symbolTable.Insert(intSym); 
 
     cSymbol *floatSym = new cSymbol("float");
     cBaseTypeNode *floatType = new cBaseTypeNode("float", 4, true);
     floatSym->SetDecl(floatType);
+    g_symbolTable.Insert(floatSym);
 
     cSymbol *longSym = new cSymbol("long");
     cBaseTypeNode *longType = new cBaseTypeNode("long", 8, false);
     longSym->SetDecl(longType);
+    g_symbolTable.Insert(longSym);
 
     cSymbol *doubleSym = new cSymbol("double");
     cBaseTypeNode *doubleType = new cBaseTypeNode("double", 8, true);
     doubleSym->SetDecl(doubleType);
+    g_symbolTable.Insert(doubleSym);
 
     g_typeSymbols["char"] = charSym;
     g_typeSymbols["int"] = intSym;
     g_typeSymbols["float"] = floatSym;
     g_typeSymbols["long"] = longSym;
     g_typeSymbols["double"] = doubleSym;
-    
+
     result = yyparse();
-    if (yyast_root != nullptr)
+
+    if (yyast_root != nullptr && result == 0)
     {
+#ifdef LAB5B
+        cSemantics semantics;
+        semantics.VisitAllNodes(yyast_root);
+#endif
+        result += yynerrs;
+
         if (result == 0)
         {
-            std::cout << yyast_root->ToString();
-        } else {
-            std::cout << yynerrs << " Errors in compile\n";
+            std::cout << yyast_root->ToString() << std::endl;
         }
+    }
+
+    if (yynerrs != 0)
+    {
+        std::cout << yynerrs << " Errors in compile\n";
     }
 
     if (result == 0 && yylex() != 0)
     {
-        std::cout << "Junk at end of program\n";
+        std::cerr << "Junk at end of program\n";
     }
 
     return result;

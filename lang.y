@@ -100,6 +100,9 @@ static bool g_semanticErrorHappened = false;
 %type <expr_node> fact
 %type <ast_node> varref
 %type <symbol> varpart
+%type <expr_node> andexpr
+%type <expr_node> relexpr
+%type <expr_node> unary
 
 %%
 
@@ -143,7 +146,7 @@ var_decl:   TYPE_ID IDENTIFIER
 struct_decl:  STRUCT open decls close IDENTIFIER
                                 {  }
 array_decl:   ARRAY TYPE_ID '[' INT_VAL ']' IDENTIFIER
-                                {  }
+                                { $$ = new cArrayDeclNode($2, $4, $6); }
 
 func_decl:  func_header ';'
                                 { $$ = $1; CHECK_ERROR(); }
@@ -206,7 +209,7 @@ stmt:       IF '(' expr ')' stmts ENDIF ';'
         |   PRINTS '(' STRING_LIT ')' ';'
                                 { }
         |   lval '=' expr ';'
-                            {  }
+                            { $$ = new cAssignNode($1, $3); }
         |   func_call ';'
                             {  }
         |   block
@@ -230,9 +233,9 @@ func_call:  IDENTIFIER '(' params ')'
 varref:   varref '.' varpart
                                 { $$ = $1; ((cVarExprNode*)$$)->AddSymbol($3); }
         | varref '[' expr ']'
-                            { $$ = $1; }
+                                { $$ = $1; $$->AddChild($3); }
         | varpart
-                            { $$ = new cVarExprNode($1); }
+                                { $$ = new cVarExprNode($1); }
 
 varpart:  IDENTIFIER
                                 { $$ = $1; }
@@ -251,37 +254,62 @@ params:   params ',' param
 param:      expr
                                 { $$ = $1; }
 
-expr:       expr EQUALS addit
-                                {  }
+expr:       expr OR andexpr
+                                { $$ = new cBinaryExprNode($1, new cOpNode(OR), $3); }
+        |   andexpr
+                                { $$ = $1; }
+
+andexpr:    andexpr AND relexpr
+                                { $$ = new cBinaryExprNode($1, new cOpNode(AND), $3); }
+        |   relexpr
+                                { $$ = $1; }
+
+relexpr:    relexpr EQUALS addit
+                                { $$ = new cBinaryExprNode($1, new cOpNode(EQUALS), $3); }
+        |   relexpr NOT_EQUALS addit
+                                { $$ = new cBinaryExprNode($1, new cOpNode(NOT_EQUALS), $3); }
+        |   relexpr '<' addit
+                                { $$ = new cBinaryExprNode($1, new cOpNode('<'), $3); }
+        |   relexpr '>' addit
+                                { $$ = new cBinaryExprNode($1, new cOpNode('>'), $3); }
+        |   relexpr LE addit
+                                { $$ = new cBinaryExprNode($1, new cOpNode(LE), $3); }
+        |   relexpr GE addit
+                                { $$ = new cBinaryExprNode($1, new cOpNode(GE), $3); }
         |   addit
-                            { $$ = $1; }
+                                { $$ = $1; }
 
 addit:      addit '+' term
                                 { $$ = new cBinaryExprNode($1, new cOpNode('+'), $3); }
         |   addit '-' term
-                            { $$ = new cBinaryExprNode($1, new cOpNode('-'), $3); }
+                                { $$ = new cBinaryExprNode($1, new cOpNode('-'), $3); }
         |   term
-                            { $$ = $1; }
+                                { $$ = $1; }
 
-term:       term '*' fact
+term:       term '*' unary
                                 { $$ = new cBinaryExprNode($1, new cOpNode('*'), $3); }
-        |   term '/' fact
-                            { $$ = new cBinaryExprNode($1, new cOpNode('/'), $3); }
-        |   term '%' fact
-                            { $$ = new cBinaryExprNode($1, new cOpNode('%'), $3); }
+        |   term '/' unary
+                                { $$ = new cBinaryExprNode($1, new cOpNode('/'), $3); }
+        |   term '%' unary
+                                { $$ = new cBinaryExprNode($1, new cOpNode('%'), $3); }
+        |   unary
+                                { $$ = $1; }
+
+unary:      '-' unary
+                                { $$ = new cUnaryExprNode(new cOpNode('-'), $2); }
         |   fact
-                            { $$ = $1; }
+                                { $$ = $1; }
 
 fact:       '(' expr ')'
-                                {  }
+                                { $$ = $2; }
         |   INT_VAL
-                            { $$ = new cIntExprNode($1); }
+                                { $$ = new cIntExprNode($1); }
         |   FLOAT_VAL
-                            { $$ = new cFloatExprNode($1); }
+                                { $$ = new cFloatExprNode($1); }
         |   varref
-                            { $$ = (cExprNode*)$1; }
+                                { $$ = (cExprNode*)$1; }
         |   func_call
-                            {  }
+                                { $$ = $1; }
 
 %%
 

@@ -62,7 +62,10 @@ class cFuncDeclNode : public cDeclNode
             }
         }
 
-        virtual bool IsFunc() { return true; }
+        virtual bool IsFunc() 
+        { 
+            return true; 
+        }
         
         virtual cDeclNode* GetType() 
         { 
@@ -72,11 +75,19 @@ class cFuncDeclNode : public cDeclNode
             return nullptr;
         }
         
-        virtual string NodeType() { return string("func"); }
-        virtual void Visit(cVisitor *visitor) { visitor->Visit(this); }
+        virtual string NodeType() 
+        { 
+            return string("func"); 
+        }
+
+        virtual void Visit(cVisitor *visitor) 
+        { 
+            visitor->Visit(this); 
+        }
 
         // Check if this function has a body (definition)
-        bool HasBody() {
+        bool HasBody() 
+        {
             // If we have more than 2 children (return type + name), 
             // and the last child is cStmtsNode, we have a body
             if (NumChildren() > 2) {
@@ -87,7 +98,8 @@ class cFuncDeclNode : public cDeclNode
         }
 
         // Check for multiple definitions when body is added
-        void CheckMultipleDefinitions(cSymbol* name) {
+        void CheckMultipleDefinitions(cSymbol* name) 
+        {
             if (!HasBody()) return;  // No body, nothing to check
             
             cSymbol* existing = g_symbolTable.FindLocal(name->GetName());
@@ -100,10 +112,9 @@ class cFuncDeclNode : public cDeclNode
                 }
             }
         }
-
-    protected:
                 // Helper to get parameter count
-        int GetParamCount() {
+        int GetParamCount() 
+        {
             // Return type is child 0, name is child 1, params (if exists) is child 2
             if (NumChildren() >= 3) {
                 cParamsNode* params = dynamic_cast<cParamsNode*>(GetChild(2));
@@ -111,5 +122,25 @@ class cFuncDeclNode : public cDeclNode
                     return params->NumChildren();
             }
             return 0;
+        }
+
+        cParamsNode* GetParams()
+        {
+            // Params is child 2 (child 0 = return type, child 1 = name, child 2 = params)
+            if (NumChildren() >= 3)
+            {
+                return dynamic_cast<cParamsNode*>(GetChild(2));
+            }
+            return nullptr;
+        }
+
+    protected:
+
+        virtual string GetName() 
+        { 
+            cSymbol* nameSym = dynamic_cast<cSymbol*>(GetChild(1));
+            if (nameSym != nullptr)
+                return nameSym->GetName();
+            return "";
         }
 };
