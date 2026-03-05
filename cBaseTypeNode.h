@@ -19,6 +19,7 @@ class cBaseTypeNode : public cDeclNode
             m_name = name;
             m_size = size;
             m_isFloat = isFloat;
+            SetSize(size);
         }
 
         // return various Is* values

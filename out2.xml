@@ -1,2 +1,66 @@
-ERROR: Function bar is not fully defined near line 7
-1 Errors in compile
+<?xml version="1.0"?>
+<program>
+  <block size="36">
+    <decls size="17">
+      <var_decl size="1" offset="0">
+        <sym id="1" name="char"/>
+        <sym id="7" name="aa"/>
+      </var_decl>
+      <var_decl size="4" offset="4">
+        <sym id="2" name="int"/>
+        <sym id="9" name="bb"/>
+      </var_decl>
+      <var_decl size="1" offset="8">
+        <sym id="1" name="char"/>
+        <sym id="11" name="cc"/>
+      </var_decl>
+      <var_decl size="4" offset="12">
+        <sym id="3" name="float"/>
+        <sym id="13" name="dd"/>
+      </var_decl>
+      <var_decl size="1" offset="16">
+        <sym id="1" name="char"/>
+        <sym id="15" name="ee"/>
+      </var_decl>
+    </decls>
+    <stmts>
+      <block size="28">
+        <decls size="11">
+          <var_decl size="4" offset="20">
+            <sym id="2" name="int"/>
+            <sym id="17" name="ff"/>
+          </var_decl>
+          <var_decl size="4" offset="24">
+            <sym id="2" name="int"/>
+            <sym id="19" name="gg"/>
+          </var_decl>
+        </decls>
+        <stmts>
+          <print>
+            <int value="1"/>
+          </print>
+        </stmts>
+      </block>
+      <block size="36">
+        <decls size="8">
+          <var_decl size="4" offset="28">
+            <sym id="2" name="int"/>
+            <sym id="21" name="hh"/>
+          </var_decl>
+          <var_decl size="4" offset="32">
+            <sym id="2" name="int"/>
+            <sym id="23" name="ii"/>
+          </var_decl>
+        </decls>
+        <stmts>
+          <print>
+            <int value="2"/>
+          </print>
+        </stmts>
+      </block>
+      <print>
+        <int value="3"/>
+      </print>
+    </stmts>
+  </block>
+</program>

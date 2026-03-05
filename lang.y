@@ -2,48 +2,65 @@
 //**************************************
 // lang.y
 //
-// Parser definition file. bison uses this file to generate the parser.
+// Bison grammar file for the lang compiler.
 //
-// Author: Phil Howard 
+// Defines the grammar for the lang language, which supports:
+//   - Integer, float, and char primitive types
+//   - Variable, array, and struct declarations
+//   - Function declarations and definitions with typed parameters
+//   - Arithmetic, relational, and logical expressions with C-style precedence
+//   - If/else, while, print, return, and assignment statements
+//   - Nested scopes via block constructs
+//
+// Author: Phil Howard
+// phil.howard@oit.edu
+//
+// Modified by: Benjamin Kerr
+//
+// Date: 2025
 //
 
 #include <iostream>
 #include "lex.h"
 #include "astnodes.h"
 
-class cFloatExprNode;
-class cBinaryExprNode;
-
+// Tracks whether a semantic error occurred during the current grammar rule.
+// Bison's yynerrs counts parse errors; this flag lets us detect semantic
+// errors that happen mid-rule so we can decide whether to invoke YYERROR.
 static bool g_semanticErrorHappened = false;
 
-#define CHECK_ERROR() { if (g_semanticErrorHappened) \
-    { g_semanticErrorHappened = false; } }
-#define PROP_ERROR() { if (g_semanticErrorHappened) \
-    { g_semanticErrorHappened = false; YYERROR; } }
+// Clear the semantic error flag after handling it. Use when the error is
+// recoverable and parsing should continue normally.
+#define CHECK_ERROR() { g_semanticErrorHappened = false; }
+
+// Clear the semantic error flag and abort the current rule via YYERROR.
+// Use when a semantic error makes the partially-built AST node unusable
+// and continuing would cause cascading errors.
+#define PROP_ERROR() { g_semanticErrorHappened = false; YYERROR; }
 
 %}
 
 %locations
 
- /* union defines the type for lexical values */
+// Union defines the possible types for semantic values ($$ / $1 etc.)
 %union{
-    int             int_val;
-    float           float_val;
-    std::string*    str_val;
-    cAstNode*       ast_node;
-    cProgramNode*   program_node;
-    cBlockNode*     block_node;
-    cStmtsNode*     stmts_node;
-    cPrintNode*     stmt_node;
-    cExprNode*      expr_node;
-    cIntExprNode*   int_node;
-    cSymbol*        symbol;
-    cDeclsNode*     decls_node;
-    cParamNode*     param_node;
-    cParamsNode*    params_node;
-    cFuncDeclNode*  func_decl_node;
-    cReturnNode*    return_node;
-    cFuncCallNode*  func_call_node;
+    int             int_val;        // integer literal value
+    float           float_val;      // float literal value
+    std::string*    str_val;        // string literal value
+    cAstNode*       ast_node;       // generic AST node
+    cProgramNode*   program_node;   // top-level program node
+    cBlockNode*     block_node;     // scoped block
+    cStmtsNode*     stmts_node;     // list of statements
+    cPrintNode*     stmt_node;      // print statement
+    cExprNode*      expr_node;      // expression
+    cIntExprNode*   int_node;       // integer literal expression
+    cSymbol*        symbol;         // symbol table entry
+    cDeclsNode*     decls_node;     // list of declarations
+    cParamNode*     param_node;     // single parameter declaration
+    cParamsNode*    params_node;    // list of parameter declarations
+    cFuncDeclNode*  func_decl_node; // function declaration/definition
+    cReturnNode*    return_node;    // return statement
+    cFuncCallNode*  func_call_node; // function call expression
     }
 
 %{
@@ -88,7 +105,7 @@ static bool g_semanticErrorHappened = false;
 %type <ast_node> func_prefix
 %type <func_call_node> func_call
 %type <params_node> paramsspec
-%type <param_node> paramspec
+%type <ast_node> paramspec
 %type <ast_node> params
 %type <ast_node> param
 %type <stmts_node> stmts
@@ -109,7 +126,7 @@ static bool g_semanticErrorHappened = false;
 program: PROGRAM block
                                 { $$ = new cProgramNode($2);
                                   yyast_root = $$;
-                                  if (yynerrs == 0) 
+                                  if (yynerrs == 0)
                                       YYACCEPT;
                                   else
                                       YYABORT;
@@ -119,6 +136,8 @@ block:  open decls stmts close
     |   open stmts close
                                 { $$ = new cBlockNode(nullptr, $2); }
 
+// open/close use mid-rule actions to maintain the symbol table scope stack
+// in sync with the syntactic block structure of the source program.
 open:   '{'
                                 { g_symbolTable.IncreaseScope(); }
 
@@ -129,105 +148,127 @@ decls:      decls decl
                                 { $$ = $1; $$->Insert((cDeclNode*)$2); }
         |   decl
                                 { $$ = new cDeclsNode((cDeclNode*)$1); }
+
 decl:       var_decl ';'
                                 { $$ = $1; }
         |   array_decl ';'
-                            {  }
+                                { $$ = $1; }
         |   struct_decl ';'
-                            {  }
+                                { $$ = $1; }
         |   func_decl
-                            {  }
+                                { $$ = $1; }
         |   error ';'
-                            {  }
+                                { $$ = nullptr; }
 
 var_decl:   TYPE_ID IDENTIFIER
-                { $$ = new cVarDeclNode($1, $2); 
-                  CHECK_ERROR(); }
+                                {
+                                    // Insert a fresh symbol into the current scope before
+                                    // constructing the node so FindLocal detects redeclarations
+                                    cSymbol *fresh = new cSymbol($2->GetName());
+                                    g_symbolTable.Insert(fresh);
+                                    $$ = new cVarDeclNode($1, fresh);
+                                    CHECK_ERROR();
+                                }
+
 struct_decl:  STRUCT open decls close IDENTIFIER
-                                {  }
+                                { $$ = nullptr; /* TODO: implement struct declarations */ }
+
 array_decl:   ARRAY TYPE_ID '[' INT_VAL ']' IDENTIFIER
                                 { $$ = new cArrayDeclNode($2, $4, $6); }
 
 func_decl:  func_header ';'
-                                { $$ = $1; CHECK_ERROR(); }
-        |   func_header  '{' decls stmts '}'
-                                { 
+                                {
+                                    // Forward declaration only -- no body
+                                    g_symbolTable.DecreaseScope();
                                     $$ = $1;
-                                    $$->AddChild($4);  // Add stmts
-                                    cSymbol* name = (cSymbol*)$$->GetChild(1);
+                                    CHECK_ERROR();
+                                }
+        |   func_header  '{' decls stmts '}'
+                                {
+                                    $$ = $1;
+                                    $$->AddChild($3);
+                                    $$->AddChild($4);
+                                    // child(1) is the function name symbol
+                                    cSymbol *name = (cSymbol*)$$->GetChild(1);
                                     $$->CheckMultipleDefinitions(name);
-                                    CHECK_ERROR(); 
+                                    g_symbolTable.DecreaseScope();
+                                    CHECK_ERROR();
                                 }
         |   func_header  '{' stmts '}'
-                                { 
+                                {
                                     $$ = $1;
-                                    $$->AddChild($3);  // Add stmts
-                                    cSymbol* name = (cSymbol*)$$->GetChild(1);
+                                    $$->AddChild($3);
+                                    // child(1) is the function name symbol
+                                    cSymbol *name = (cSymbol*)$$->GetChild(1);
                                     $$->CheckMultipleDefinitions(name);
-                                    CHECK_ERROR(); 
+                                    g_symbolTable.DecreaseScope();
+                                    CHECK_ERROR();
                                 }
-                                
-func_header: func_prefix paramsspec ')'
-                                { 
+
+func_header: func_prefix { g_symbolTable.IncreaseScope(); } paramsspec ')'
+                                {
+                                    // func_prefix holds child(0)=return type, child(1)=name
                                     cSymbol *returnType = (cSymbol*)((cAstNode*)$1)->GetChild(0);
-                                    cSymbol *name = (cSymbol*)((cAstNode*)$1)->GetChild(1);
-                                    $$ = new cFuncDeclNode(returnType, name, $2);
+                                    cSymbol *name       = (cSymbol*)((cAstNode*)$1)->GetChild(1);
+                                    $$ = new cFuncDeclNode(returnType, name, $3);
                                 }
-        |    func_prefix ')'
-                                { 
+        |    func_prefix { g_symbolTable.IncreaseScope(); } ')'
+                                {
                                     cSymbol *returnType = (cSymbol*)((cAstNode*)$1)->GetChild(0);
-                                    cSymbol *name = (cSymbol*)((cAstNode*)$1)->GetChild(1);
+                                    cSymbol *name       = (cSymbol*)((cAstNode*)$1)->GetChild(1);
                                     $$ = new cFuncDeclNode(returnType, name, nullptr);
                                 }
+
 func_prefix: TYPE_ID IDENTIFIER '('
-                                { 
+                                {
                                     $$ = new cPrefixNode();
                                     $$->AddChild($1);
                                     $$->AddChild($2);
                                 }
-paramsspec:  paramsspec ',' paramspec
-                                { $$ = $1; $$->AddParam($3); }
+
+paramsspec: paramsspec ',' paramspec
+                                { $$ = $1; $$->AddChild($3); }
         |   paramspec
                                 { $$ = new cParamsNode($1); }
 
-paramspec:  var_decl
-                                { $$ = new cParamNode((cVarDeclNode*)$1); }
+paramspec: var_decl
+                                { $$ = $1; }
 
 stmts:      stmts stmt
                                 { $$ = $1; $$->Insert((cStmtNode*)$2); }
         |   stmt
-                            { $$ = new cStmtsNode((cStmtNode*)$1); }
-                            
+                                { $$ = new cStmtsNode((cStmtNode*)$1); }
+
 stmt:       IF '(' expr ')' stmts ENDIF ';'
-                                {  }
+                                { $$ = nullptr; /* TODO: implement if statement */ }
         |   IF '(' expr ')' stmts ELSE stmts ENDIF ';'
-                                {  }
+                                { $$ = nullptr; /* TODO: implement if/else statement */ }
         |   WHILE '(' expr ')' stmt
-                                {  }
+                                { $$ = nullptr; /* TODO: implement while statement */ }
         |   PRINT '(' expr ')' ';'
                                 { $$ = new cPrintNode($3); }
         |   PRINTS '(' STRING_LIT ')' ';'
-                                { }
+                                { $$ = nullptr; /* TODO: implement string print */ }
         |   lval '=' expr ';'
-                            { $$ = new cAssignNode($1, $3); }
+                                { $$ = new cAssignNode($1, $3); }
         |   func_call ';'
-                            {  }
+                                { $$ = nullptr; /* function called for side effects only */ }
         |   block
-                            {  }
+                                { $$ = $1; }
         |   RETURN expr ';'
-                            { $$ = new cReturnNode($2); }
+                                { $$ = new cReturnNode($2); }
         |   error ';'
-                            {}
+                                { $$ = nullptr; }
 
 func_call:  IDENTIFIER '(' params ')'
-                                { 
-                                    $$ = new cFuncCallNode($1, $3); 
-                                    CHECK_ERROR(); 
+                                {
+                                    $$ = new cFuncCallNode($1, $3);
+                                    CHECK_ERROR();
                                 }
         |   IDENTIFIER '(' ')'
-                                { 
-                                    $$ = new cFuncCallNode($1); 
-                                    CHECK_ERROR(); 
+                                {
+                                    $$ = new cFuncCallNode($1);
+                                    CHECK_ERROR();
                                 }
 
 varref:   varref '.' varpart
@@ -241,16 +282,16 @@ varpart:  IDENTIFIER
                                 { $$ = $1; }
 
 lval:     varref
-                                {  }
+                                { $$ = $1; }
 
 params:   params ',' param
                                 { $$ = $1; $$->AddChild($3); }
         |   param
-                                { 
+                                {
                                     $$ = new cPrefixNode();
                                     $$->AddChild($1);
                                 }
-                            
+
 param:      expr
                                 { $$ = $1; }
 
@@ -313,19 +354,20 @@ fact:       '(' expr ')'
 
 %%
 
-// Function to format error messages
+// Format and print a bison parse error to stderr
 int yyerror(const char *msg)
 {
     std::cerr << "ERROR: " << msg << " at symbol "
         << yytext << " on line " << yylineno << "\n";
-
     return 0;
 }
 
-// Function that gets called when a semantic error happens
+// Called when a semantic error is detected during parsing.
+// Sets g_semanticErrorHappened so grammar rules can decide whether to
+// propagate via PROP_ERROR() or recover via CHECK_ERROR().
 void SemanticParseError(std::string error)
 {
-    std::cout << "ERROR: " << error << " near line " 
+    std::cerr << "ERROR: " << error << " near line "
               << yylineno << "\n";
     g_semanticErrorHappened = true;
     yynerrs++;

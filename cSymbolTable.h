@@ -1,56 +1,61 @@
-//****************************************************
-// Starter code for a symbol table definition.
-// You are not required to use any of these names, but you will need the 
-// described functionality
+#pragma once
+//**************************************
+// cSymbolTable.h
 //
-
-#ifndef CSYMBOLTABLE_H
-#define CSYMBOLTABLE_H
+// Nested scope symbol table for the lang compiler.
+//
+// Scopes are managed as a stack of hash maps. The innermost (most recently
+// opened) scope is at the back of the vector. Lookups search from innermost
+// to outermost, implementing standard lexical scoping rules.
+//
+// Author: Phil Howard
+// phil.howard@oit.edu
+//
+// Modified by: Benjamin Kerr
+//
+// Date: 2025
+//
 
 #include <string>
 #include <vector>
 #include <unordered_map>
 
 class cSymbol;
-// NOTE: The following typedef will have to be replaced by something meaningful
-typedef void symbolTable_t;
+
+// A single scope level: maps symbol names to their cSymbol instances
+using scope_t = std::unordered_map<std::string, cSymbol*>;
 
 class cSymbolTable
 {
-    private:
-        std::vector<std::unordered_map<std::string, cSymbol*>> m_scopes;
     public:
-        // Construct an empty symbol table
+        // Construct an empty symbol table with one global scope
         cSymbolTable();
 
-        // Increase the scope: add a level to the nested symbol table
-        // Return value is the newly created scope
-        symbolTable_t *IncreaseScope();
+        // Open a new inner scope and return a pointer to it
+        scope_t *IncreaseScope();
 
-        // Decrease the scope: remove the outer-most scope.
-        // Returned value is the outer-most scope AFTER the pop.
+        // Close the innermost scope and return a pointer to the new innermost.
+        // Returns nullptr if the table is now empty.
         //
-        // NOTE: do NOT clean up memory after poping the table. Parts of the
-        // AST will probably contain pointers to symbols in the popped table.
-        symbolTable_t *DecreaseScope();
+        // NOTE: do NOT delete the popped scope. Parts of the AST may still
+        // hold pointers to symbols that were declared in it.
+        scope_t *DecreaseScope();
 
-        // insert a symbol into the table
-        // Assumes the symbol is not already in the table
+        // Insert a symbol into the innermost scope.
+        // Assumes the symbol is not already present in the current scope.
         void Insert(cSymbol *sym);
 
-        // Do a lookup in the nested table. 
-        // NOTE: This starts at the inner-most scope and works its way out until
-        // a match is found.
-        // Return the symbol for the inner-most match. 
-        // Returns nullptr if no match is found.
+        // Search all scopes from innermost to outermost for a symbol by name.
+        // Returns the first (innermost) match, or nullptr if not found.
         cSymbol *Find(std::string name);
 
-        // Find a symbol in the inner-most scope.
-        // NOTE: This ONLY searches the inner-most scope.
-        // Returns nullptr if the symbol is not found.
+        // Search only the innermost scope for a symbol by name.
+        // Returns nullptr if not found.
         cSymbol *FindLocal(std::string name);
+
+    private:
+        std::vector<scope_t> m_scopes;  // Stack of scopes; back() is innermost
 };
 
-// declare the global symbol table. The definition will have to be in a cpp file
+// Global symbol table shared across all compilation phases; defined in main.cpp
 extern cSymbolTable g_symbolTable;
-#endif

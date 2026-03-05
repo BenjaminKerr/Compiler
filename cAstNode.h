@@ -2,120 +2,117 @@
 //**************************************
 // cAstNode.h
 //
-// pure virtual base class for all AST nodes
+// Pure virtual base class for all AST nodes.
 //
-// Author: Phil Howard 
+// Nodes form a tree structure where each node may have zero or more children.
+// The tree is serialized to XML-style output via ToString(). Semantic analysis
+// and other passes traverse the tree using the Visitor pattern (cVisitor).
+//
+// Author: Phil Howard
 // phil.howard@oit.edu
 //
+// Modified by: Benjamin Kerr
+//
+// Date: 2025
 //
 
 #include <string>
 #include <vector>
 #include <iostream>
 
-using std::string;
-using std::vector;
-
 #include "cVisitor.h"
 
-// The following are defined in lex.h, but can't include due to circularity
-extern int yylineno;        // Need to be able to store line numbers
-extern int yynerrs;         // Increment on each semantic error
+// Defined in lex.h -- included here to avoid circular dependency
+extern int yylineno;    // Source line number at time of node creation
+extern int yynerrs;     // Incremented on each semantic error
 
-// Declare the Semantic Error routine used at parse time.
-// By declaring it here, all AST node implementations have access to it.
+// SemanticParseError is used during parsing (in .y grammar rules) to report
+// errors. It is distinct from SemanticError() below, which is called during
+// visitor-based analysis passes after the parse is complete.
 void SemanticParseError(std::string error);
 
 class cAstNode
 {
     public:
-        //*************************************
-        // Constructor
+        //**************************************
+        // Constructor: captures source line number at time of node creation
         cAstNode() : m_LineNum(yylineno), m_hasSemanticError(false) {}
-        
-        //*************************************
-        // Add a child to this node
+
+        //**************************************
+        // Append a child node to the end of the children list
         void AddChild(cAstNode *child)
         {
             m_children.push_back(child);
         }
 
-        //*************************************
-        // Return a child by index
+        //**************************************
+        // Return child node at the given index, or nullptr if out of range
         cAstNode* GetChild(int child)
         {
             if (child >= (int)m_children.size()) return nullptr;
             return m_children[child];
         }
-        
-                //*************************************
-        int NumChildren()       { return (int)m_children.size(); }
-        
-    //****************************************
-    // As protected, these methods are limited as to where you call them.
-    // I impose an even more-strict requirement:
-    //     You are not allowed to call any of these methods except on a node
-    //     of your own class. Example, code within cExprNode can't call
-    //     HasChildren() on a node of type cVarExprNode().
+
+        //**************************************
+        // Return the number of direct children of this node
+        int NumChildren() { return (int)m_children.size(); }
+
+    //**************************************
+    // Protected methods are restricted to use within the same class only.
+    // Even subclasses may not call these on nodes of a different type.
+    // Example: code in cExprNode may not call HasChildren() on a cVarExprNode.
     protected:
 
-        //*************************************
-        // Copy all children from one node into this node
+        //**************************************
+        // Copy all children from another node into this node.
+        // Used when a grammar rule consolidates children from a temporary node.
         void AddAllChildren(cAstNode *node)
         {
             if (node != nullptr && node->HasChildren())
             {
-                for (auto it=node->m_children.begin(); 
-                        it != node->m_children.end(); 
-                        it++)
+                for (auto* child : node->m_children)
                 {
-                    AddChild(*it);
+                    AddChild(child);
                 }
             }
         }
 
-        //*************************************
-        bool HasChildren()      { return !m_children.empty(); }
+        //**************************************
+        // Returns true if this node has at least one child
+        bool HasChildren() { return !m_children.empty(); }
 
-        //*************************************
-        // Set a child by index. The child must already exist
+        //**************************************
+        // Replace the child at the given index. Index must already exist.
         void SetChild(int index, cAstNode *child)
         {
             m_children[index] = child;
         }
 
-    //*****************************************
-    // The following are only used by the ToString function. They should
-    // not be called anywhere else.
+        //**************************************
+        // Returns the name of the concrete node type (e.g. "varDecl").
+        // Used by ToString() to produce XML tags.
+        virtual std::string NodeType() = 0;
 
-        //*************************************
-        // Return the name of the node type
-        virtual string NodeType() = 0; //      { return "AST"; }
-
-        //*************************************
-        // Must be overriden by nodes that have attributes
-        virtual string AttributesToString()   { return string(""); }
+        //**************************************
+        // Returns an XML attribute string for this node (e.g. " name='x'").
+        // Override in subclasses that have attributes; default returns empty.
+        virtual std::string AttributesToString() { return std::string(""); }
 
     public:
-        //*************************************
-        // The following functions are public, but their use is limited:
-        //    ToString should only be called by main
-        //
-        //    The VisitAllChildren should only be called by the Visitor base
-        //    class or it's derivatives.
-        //
-        //    The Visit() function should only be called within derivatives of
-        //    the Visitor class.
-        //
-        //    SemanticError() and HasSemanticError() functions should only be 
-        //    called within derivatives of the Visitor class.
-        //*************************************
+        //**************************************
+        // Usage restrictions for the following public methods:
+        //   ToString()          -- call only from main
+        //   VisitAllChildren()  -- call only from cVisitor and its derivatives
+        //   Visit()             -- call only from cVisitor and its derivatives
+        //   SemanticError()     -- call only from cVisitor and its derivatives
+        //   HasSemanticError()  -- call only from cVisitor and its derivatives
+        //**************************************
 
-        //*************************************
-        // return a string representation of the node
-        string ToString() 
+        //**************************************
+        // Serialize this node and all descendants to an XML-style string
+        std::string ToString()
         {
-            string result("");
+            std::string result("");
 
             result += "<" + NodeType();
             result += AttributesToString();
@@ -123,70 +120,64 @@ class cAstNode
             if (HasChildren())
             {
                 result += ">";
-                for (auto it=m_children.begin(); it != m_children.end(); it++)
+                for (auto* child : m_children)
                 {
-                    if ( (*it) != nullptr) result += (*it)->ToString();
+                    if (child != nullptr) result += child->ToString();
                 }
-
                 result += "</" + NodeType() + ">\n";
             }
             else
+            {
                 result += " />";
+            }
 
             return result;
         }
 
-        //*************************************
-        // Used to print semantic errors
-        void SemanticError(string message)
+        //**************************************
+        // Report a semantic error on this node. Increments the global error
+        // count and marks this node so HasSemanticError() returns true.
+        void SemanticError(std::string message)
         {
-            std::cout << "ERROR: " << message << " near line " << m_LineNum 
+            std::cerr << "ERROR: " << message << " near line " << m_LineNum
                 << "\n";
             yynerrs++;
             m_hasSemanticError = true;
         }
 
         //**************************************
-        // VisitAllChildren should only be called by the Visitor base class
-        // or any of its derivatives.
+        // Invoke visitor->Visit() on each direct child of this node.
+        // Should only be called from cVisitor or its derivatives.
         void VisitAllChildren(cVisitor* visitor)
         {
-            for (auto it=m_children.begin(); it<m_children.end(); it++)
+            for (auto* child : m_children)
             {
-                if ((*it) != nullptr) (*it)->Visit(visitor);
+                if (child != nullptr) child->Visit(visitor);
             }
         }
 
-        //*************************************
-        // Used by visitor pattern. Every node must override with:
-        //    virtual void Visit(cVisitor *visitor) { visitor->Visit(this); }
+        //**************************************
+        // Entry point for the visitor pattern. Every concrete subclass must
+        // override with: virtual void Visit(cVisitor *visitor) { visitor->Visit(this); }
         virtual void Visit(cVisitor *visitor) = 0;
 
-        //*************************************
-        // Do a deep check to see if this node or its children have semantic
-        // errors
+        //**************************************
+        // Returns true if this node or any descendant has a semantic error.
+        // Allows passes to skip subtrees that already have errors.
         bool HasSemanticError()
         {
-            if (m_hasSemanticError) 
-                return true;
-            else
+            if (m_hasSemanticError) return true;
+
+            for (auto* child : m_children)
             {
-                for (auto it=m_children.begin(); it != m_children.end(); it++)
-                {
-                    if ( (*it) != nullptr && (*it)->HasSemanticError())
-                    {
-                        return true;
-                    }
-                }
+                if (child != nullptr && child->HasSemanticError()) return true;
             }
 
             return false;
         }
 
     private:
-        vector<cAstNode *> m_children;      // list of all children
-        int m_LineNum;                      // The source line at the time the
-                                            // node was created
-        bool m_hasSemanticError;
+        std::vector<cAstNode *> m_children;     // Ordered list of child nodes
+        int m_LineNum;                           // Source line when node was created
+        bool m_hasSemanticError;                 // True if a semantic error was reported on this node
 };
-

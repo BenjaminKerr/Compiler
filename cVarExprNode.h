@@ -13,16 +13,13 @@
 class cVarExprNode : public cExprNode
 {
     public:
-        // param is the variable symbol (or list for struct field refs)
-        cVarExprNode(cSymbol *var) : cExprNode()
+        cVarExprNode(cSymbol *symbol) : cExprNode()
         {
-            AddChild(var);
-            
-            // Semantic check: Check if variable is defined
-            if (var->GetDecl() == nullptr) {
-                SemanticParseError("Symbol " + var->GetName() + " not defined");
-            }
+            AddChild(symbol);
+            m_size = 0;
+            m_offset = 0;
         }
+
         virtual cDeclNode* GetType() 
         {
             // Get the first symbol (variable name)
@@ -40,4 +37,26 @@ class cVarExprNode : public cExprNode
         }        
         virtual string NodeType() { return string("varref"); }
         virtual void Visit(cVisitor *visitor) { visitor->Visit(this); }
+
+        virtual string AttributesToString()
+        {
+            string result = "";
+            // Always show size and offset for varrefs that have been processed
+            // We know it's processed if we've visited it (check if we have a symbol child)
+            if (NumChildren() > 0)
+            {
+                result += " size=\"" + std::to_string(m_size) + "\"";
+                result += " offset=\"" + std::to_string(m_offset) + "\"";
+            }
+            return result;
+        }
+
+        int GetSize() { return m_size; }
+        void SetSize(int size) { m_size = size; }
+        int GetOffset() { return m_offset; }
+        void SetOffset(int offset) { m_offset = offset; }
+
+    protected:
+        int m_size;
+        int m_offset;
 };

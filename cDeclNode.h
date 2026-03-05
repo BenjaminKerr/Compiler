@@ -14,7 +14,7 @@
 class cDeclNode : public cAstNode
 {
     public:
-        cDeclNode() : cAstNode() {}
+        cDeclNode() : cAstNode() { m_size = 0; m_offset = 0; }
 
         // Type checking methods - return false by default
         virtual bool IsArray()  { return false; }
@@ -25,7 +25,6 @@ class cDeclNode : public cAstNode
         virtual bool IsFloat()  { return false; }
         virtual bool IsInt()    { return false; }
         virtual bool IsChar()   { return false; }
-        virtual int  GetSize()  { return 0; }
         virtual string GetName() = 0;
 
         // Pure virtual - all decls must define what type they are/have
@@ -53,4 +52,26 @@ class cDeclNode : public cAstNode
 
             return false;
         }
+
+        virtual string AttributesToString()
+        {
+            string result = "";
+            
+            // Always output size and offset if either is set
+            // (changed from only outputting if non-zero)
+            if (m_size != 0)
+                result += " size=\"" + std::to_string(m_size) + "\"";
+            if (m_offset != 0 || m_size != 0)  // Show offset if we're showing size
+                result += " offset=\"" + std::to_string(m_offset) + "\"";
+            
+            return result;
+        }
+
+        virtual int GetSize() { return m_size; }
+        virtual void SetSize(int size) { m_size = size; }
+        virtual int GetOffset() { return m_offset; }
+        virtual void SetOffset(int offset) { m_offset = offset; }
+    protected:
+        int m_size;
+        int m_offset;
 };

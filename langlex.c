@@ -2036,14 +2036,13 @@ int Process_ID(const char *id) {
     cSymbol *sym = g_symbolTable.Find(id);
     if (sym != nullptr) {
         yylval.symbol = sym;
-        // Check if it's a user-defined type (struct)
         if (sym->GetDecl() != nullptr && sym->GetDecl()->IsType()) {
             return TYPE_ID;
         }
         return IDENTIFIER;
     }
-    
-    // Create a new symbol and add it to the table
+
+    // Create a new symbol and insert into current scope
     cSymbol *newSym = new cSymbol(id);
     g_symbolTable.Insert(newSym);
     yylval.symbol = newSym;
