@@ -18,6 +18,7 @@
 
 #include <string>
 #include <vector>
+using std::string;
 #include <iostream>
 
 #include "cVisitor.h"

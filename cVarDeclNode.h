@@ -29,12 +29,12 @@ class cVarDeclNode : public cDeclNode
             AddChild(type);
             AddChild(name);
 
-            // Use FindLocal to restrict redeclaration check to the current
-            // scope only -- shadowing an outer-scope symbol is allowed.
-            if (g_symbolTable.FindLocal(name->GetName()) != nullptr)
+            // Check if already declared in current scope
+            cSymbol* existing = g_symbolTable.FindLocal(name->GetName());
+            if (existing != nullptr && existing->GetDecl() != nullptr)
             {
                 SemanticParseError("Symbol " + name->GetName() +
-                                   " already defined in current scope");
+                                " already defined in current scope");
             }
             else
             {

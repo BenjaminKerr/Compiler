@@ -10,11 +10,12 @@
 //
 // Date: Jan. 18, 2015
 //
-#include "cAssignNode.h"
 #include "cAstNode.h"
+#include "cAssignNode.h"
 #include "cSymbol.h"
 #include "cStmtNode.h"
 #include "cStmtsNode.h"
+#include "cStructDeclNode.h"
 #include "cDeclNode.h"
 #include "cBaseTypeNode.h"
 #include "cDeclsNode.h"
@@ -36,3 +37,4 @@
 #include "cPrefixNode.h"
 #include "cUnaryExprNode.h"
 #include "cArrayDeclNode.h"
+#include "cCallParamsNode.h"

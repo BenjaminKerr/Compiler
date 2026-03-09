@@ -12,10 +12,12 @@
 
 void cComputeSize::Visit(cVarDeclNode *node)
 {
-    node->VisitAllChildren(this);
-
+    // Visit type first to ensure struct sizes are computed
     cDeclNode *type = node->GetType();
-    if (type == nullptr) return;
+    if (type != nullptr && (type->IsStruct() || type->IsArray()) && type->GetSize() == 0)
+        type->Visit(this);
+    
+    node->VisitAllChildren(this);
 
     int typeSize = type->GetSize();
     int &currentOffset = m_scopeStack.back().currentOffset;
@@ -25,11 +27,13 @@ void cComputeSize::Visit(cVarDeclNode *node)
     node->SetOffset(currentOffset);
     node->SetSize(typeSize);
     currentOffset += typeSize;
+    
+    // Track high water mark
+    m_scopeStack.back().highWater = std::max(m_scopeStack.back().highWater, currentOffset);
 }
 
 void cComputeSize::Visit(cDeclsNode *node)
 {
-    // Record offset before declarations so we can compute total size added
     int startOffset = m_scopeStack.back().currentOffset;
     node->VisitAllChildren(this);
     node->SetSize(m_scopeStack.back().currentOffset - startOffset);
@@ -37,35 +41,65 @@ void cComputeSize::Visit(cDeclsNode *node)
 
 void cComputeSize::Visit(cBlockNode *node)
 {
-    // Save the offset at block entry so we can restore it after visiting,
-    // allowing sibling blocks to reuse the same stack space.
     int savedOffset = m_scopeStack.back().currentOffset;
-
+    int savedHighWater = m_scopeStack.back().highWater;
+    
+    // Set high water to at least savedOffset for this block
+    m_scopeStack.back().highWater = savedOffset;
+    
     node->VisitAllChildren(this);
-
-    // Record the peak offset reached inside this block (high-water mark),
-    // which determines how much stack space this block needs at runtime.
-    int highWater = m_scopeStack.back().currentOffset;
-    node->SetSize(highWater);
-
-    // Restore offset so the next sibling block starts from the same base,
-    // but preserve the high-water mark if it exceeded the saved value.
+    
+    int myHighWater = m_scopeStack.back().highWater;
+    node->SetSize(myHighWater - savedOffset);
+    
+    // Reclaim space, but update parent's high water mark
     m_scopeStack.back().currentOffset = savedOffset;
-    if (highWater > m_scopeStack.back().currentOffset)
-        m_scopeStack.back().currentOffset = highWater;
+    m_scopeStack.back().highWater = std::max(savedHighWater, myHighWater);
 }
 
 void cComputeSize::Visit(cVarExprNode *node)
 {
     node->VisitAllChildren(this);
-
-    // child(0) is the cSymbol for the referenced variable
     cSymbol *sym = dynamic_cast<cSymbol*>(node->GetChild(0));
     if (sym == nullptr || sym->GetDecl() == nullptr) return;
 
-    cDeclNode *decl = sym->GetDecl();
-    node->SetSize(decl->GetSize());
-    node->SetOffset(decl->GetOffset());
+    int totalOffset = sym->GetDecl()->GetOffset();
+    int finalSize   = sym->GetDecl()->GetSize();
+
+    // Walk field access chain, accumulating offsets
+    for (int i = 1; i < node->NumChildren(); i++)
+    {
+        cSymbol *fieldSym = dynamic_cast<cSymbol*>(node->GetChild(i));
+        if (fieldSym == nullptr || fieldSym->GetDecl() == nullptr) break;
+        totalOffset += fieldSym->GetDecl()->GetOffset();
+        finalSize    = fieldSym->GetDecl()->GetSize();
+    }
+
+    node->SetSize(finalSize);
+    node->SetOffset(totalOffset);
+
+    // Compute rowsizes if this varref has subscript children (array access).
+    // We count non-symbol children as subscripts.
+    int numSubscripts = 0;
+    for (int i = 1; i < node->NumChildren(); i++)
+    {
+        if (dynamic_cast<cSymbol*>(node->GetChild(i)) == nullptr)
+            numSubscripts++;
+    }
+
+    if (numSubscripts > 0)
+    {
+        std::vector<int> rowsizes;
+        cDeclNode *arrDecl = sym->GetDecl()->GetType(); // e.g. int_5 or int_5_20
+        while (arrDecl != nullptr && arrDecl->IsArray())
+        {
+            cDeclNode *elem = arrDecl->GetType(); // element type of this array level
+            if (elem == nullptr) break;
+            rowsizes.push_back(elem->GetSize());
+            arrDecl = elem; // descend
+        }
+        node->SetRowSizes(rowsizes);
+    }
 }
 
 void cComputeSize::Visit(cFuncDeclNode *node)
@@ -88,6 +122,7 @@ void cComputeSize::Visit(cFuncDeclNode *node)
                                   ? varDecl->GetType()->GetSize() : 1);
                 paramOffset -= slotSize;
             }
+        params->SetSize(-paramOffset - 12);
         }
     }
 
@@ -107,15 +142,46 @@ void cComputeSize::Visit(cFuncDeclNode *node)
 
 void cComputeSize::Visit(cParamsNode *node)
 {
-    // Compute the total stack space consumed by all parameters.
-    // Each parameter occupies at least one word (4 bytes) on the stack
-    // per the calling convention, regardless of its declared size.
+    fprintf(stderr, "DEBUG Visit(cParamsNode) called\n");
     int total = 0;
     for (int i = 0; i < node->NumChildren(); i++)
     {
-        cVarDeclNode *param = dynamic_cast<cVarDeclNode*>(node->GetChild(i));
+        cVarDeclNode* param = dynamic_cast<cVarDeclNode*>(node->GetChild(i));
         if (param != nullptr)
-            total += GetParamSlotSize(param->GetType());
+        {
+            cDeclNode* type = param->GetType();
+            int typeSize = (type != nullptr) ? type->GetSize() : 1;
+            int paramSize = (typeSize < 4) ? 4 : typeSize;
+            total += paramSize;
+        }
     }
     node->SetSize(total);
+}
+
+void cComputeSize::Visit(cStructDeclNode *node)
+{
+    if (node->GetSize() > 0) return;  // already computed
+    
+    node->SetOffset(0);
+    ScopeInfo structScope = {0, 0};
+    m_scopeStack.push_back(structScope);
+    node->VisitAllChildren(this);
+    int structSize = m_scopeStack.back().highWater;
+    node->SetSize(structSize);
+    m_scopeStack.pop_back();
+}
+
+void cComputeSize::Visit(cCallParamsNode *node)
+{
+    node->VisitAllChildren(this);
+    // Size = size of first argument (word-aligned)
+    if (node->NumChildren() > 0)
+    {
+        cVarExprNode* first = dynamic_cast<cVarExprNode*>(node->GetChild(0));
+        if (first != nullptr)
+        {
+            int s = first->GetSize();
+            node->SetSize((s < 4) ? 4 : s);
+        }
+    }
 }

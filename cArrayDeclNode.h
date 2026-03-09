@@ -18,11 +18,11 @@ class cArrayDeclNode : public cDeclNode
         {
             AddChild(type);
             AddChild(name);
-            m_size = size;
-            
-            // Set the declaration for the name symbol
+            m_count = size;   // rename m_size -> m_count
             name->SetDecl(this);
         }
+
+        int GetCount() { return m_count; }
 
         virtual bool IsType() { return true; }
 
@@ -30,10 +30,9 @@ class cArrayDeclNode : public cDeclNode
 
         virtual cDeclNode* GetType() 
         { 
-            // Array's type is the element type
             cSymbol* typeSym = dynamic_cast<cSymbol*>(GetChild(0));
-            if (typeSym != nullptr)
-                return typeSym->GetDecl();
+            if (typeSym != nullptr && typeSym->GetDecl() != nullptr)
+                return typeSym->GetDecl();  // NOT ->GetType(), just ->GetDecl()
             return nullptr;
         }
 
@@ -45,11 +44,24 @@ class cArrayDeclNode : public cDeclNode
             return "";
         }
 
-        int GetSize() { return m_size; }
+        virtual int GetSize() override
+        {
+            cDeclNode *elemType = GetType();
+            int elemSize = (elemType != nullptr) ? elemType->GetSize() : 1;
+            return m_count * elemSize;   // use m_count, not m_size
+        }
 
-        virtual string NodeType() { return string("array"); }
+        virtual void SetSize(int size) override { /* ignore — size is always computed */ }
+
+        virtual string NodeType() { return string("array_decl"); }
+
+        virtual string AttributesToString()
+        {
+            return " count=\"" + std::to_string(m_count) + "\"";
+        }
+
         virtual void Visit(cVisitor *visitor) { visitor->Visit(this); }
 
     protected:
-        int m_size;  // Number of elements in the array
+        int m_count;  // Number of elements in the array
 };

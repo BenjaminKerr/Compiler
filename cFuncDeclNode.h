@@ -99,6 +99,19 @@ class cFuncDeclNode : public cDeclNode
             return false;
         }
 
+        void CheckMultipleDefinitions(cSymbol* name) 
+        {
+            if (!HasBody()) return;
+            cSymbol* existing = g_symbolTable.FindLocal(name->GetName());
+            if (existing != nullptr && existing->GetDecl() != nullptr && 
+                existing->GetDecl()->IsFunc() && existing->GetDecl() != this) {
+                cFuncDeclNode* prevFunc = dynamic_cast<cFuncDeclNode*>(existing->GetDecl());
+                if (prevFunc != nullptr && prevFunc->HasBody()) {
+                    SemanticParseError(name->GetName() + " already has a definition");
+                }
+            }
+        }
+
         // Return the number of declared parameters, or 0 if none
         int GetParamCount()
         {

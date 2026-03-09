@@ -85,25 +85,25 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 29 "lang.y"
+#line 46 "lang.y"
 
-    int             int_val;
-    float           float_val;
-    std::string*    str_val;
-    cAstNode*       ast_node;
-    cProgramNode*   program_node;
-    cBlockNode*     block_node;
-    cStmtsNode*     stmts_node;
-    cPrintNode*     stmt_node;
-    cExprNode*      expr_node;
-    cIntExprNode*   int_node;
-    cSymbol*        symbol;
-    cDeclsNode*     decls_node;
-    cParamNode*     param_node;
-    cParamsNode*    params_node;
-    cFuncDeclNode*  func_decl_node;
-    cReturnNode*    return_node;
-    cFuncCallNode*  func_call_node;
+    int             int_val;        // integer literal value
+    float           float_val;      // float literal value
+    std::string*    str_val;        // string literal value
+    cAstNode*       ast_node;       // generic AST node
+    cProgramNode*   program_node;   // top-level program node
+    cBlockNode*     block_node;     // scoped block
+    cStmtsNode*     stmts_node;     // list of statements
+    cPrintNode*     stmt_node;      // print statement
+    cExprNode*      expr_node;      // expression
+    cIntExprNode*   int_node;       // integer literal expression
+    cSymbol*        symbol;         // symbol table entry
+    cDeclsNode*     decls_node;     // list of declarations
+    cParamNode*     param_node;     // single parameter declaration
+    cParamsNode*    params_node;    // list of parameter declarations
+    cFuncDeclNode*  func_decl_node; // function declaration/definition
+    cReturnNode*    return_node;    // return statement
+    cFuncCallNode*  func_call_node; // function call expression
     
 
 #line 110 "langparse.h"

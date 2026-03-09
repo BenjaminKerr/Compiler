@@ -28,6 +28,7 @@ extern std::map<std::string, cSymbol*> g_typeSymbols;
 
 // Global symbol table shared across all compilation phases
 cSymbolTable g_symbolTable;
+long long cSymbol::nextId = 0;
 
 // Register a built-in primitive type in both the symbol table and type map
 static void RegisterBuiltinType(const std::string &name, int size, bool isFloat)
@@ -77,9 +78,7 @@ int main(int argc, char **argv)
     // Register all built-in primitive types before parsing begins
     RegisterBuiltinType("char",   1, false);
     RegisterBuiltinType("int",    4, false);
-    RegisterBuiltinType("float",  4, true);
-    RegisterBuiltinType("long",   8, false);
-    RegisterBuiltinType("double", 8, true);
+    RegisterBuiltinType("float",  8, true);
 
     result = yyparse();
 

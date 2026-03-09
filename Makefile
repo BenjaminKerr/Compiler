@@ -49,7 +49,7 @@ clean:
 	g++ $(COPTS) $< -o $@
 
 # main.cpp depends on the bison-generated header for token definitions
-main.o: main.cpp langparse.h
+main.o: main.cpp langparse.c
 	g++ $(COPTS) main.cpp -o $@
 
 # Suppress sign-compare warnings from flex-generated code

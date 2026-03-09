@@ -160,18 +160,16 @@ decl:       var_decl ';'
         |   error ';'
                                 { $$ = nullptr; }
 
-var_decl:   TYPE_ID IDENTIFIER
-                                {
-                                    // Insert a fresh symbol into the current scope before
-                                    // constructing the node so FindLocal detects redeclarations
-                                    cSymbol *fresh = new cSymbol($2->GetName());
-                                    g_symbolTable.Insert(fresh);
-                                    $$ = new cVarDeclNode($1, fresh);
-                                    CHECK_ERROR();
-                                }
+var_decl: TYPE_ID IDENTIFIER
+    {
+        cSymbol* fresh = new cSymbol($2->GetName());
+        g_symbolTable.Insert(fresh);
+        $$ = new cVarDeclNode($1, fresh);
+        CHECK_ERROR();
+    }
 
 struct_decl:  STRUCT open decls close IDENTIFIER
-                                { $$ = nullptr; /* TODO: implement struct declarations */ }
+                { $$ = new cStructDeclNode($3, $5); CHECK_ERROR(); }
 
 array_decl:   ARRAY TYPE_ID '[' INT_VAL ']' IDENTIFIER
                                 { $$ = new cArrayDeclNode($2, $4, $6); }
@@ -287,10 +285,7 @@ lval:     varref
 params:   params ',' param
                                 { $$ = $1; $$->AddChild($3); }
         |   param
-                                {
-                                    $$ = new cPrefixNode();
-                                    $$->AddChild($1);
-                                }
+                                { $$ = new cCallParamsNode($1); }
 
 param:      expr
                                 { $$ = $1; }

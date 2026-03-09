@@ -48,11 +48,13 @@ class cComputeSize : public cVisitor
         void Visit(cVarExprNode  *node) override;
         void Visit(cFuncDeclNode *node) override;
         void Visit(cParamsNode   *node) override;
+        virtual void Visit(cStructDeclNode *node);
+        virtual void Visit(cCallParamsNode *node);
 
     protected:
-        struct ScopeInfo
-        {
-            int currentOffset;  // Next available byte offset in this scope
+        struct ScopeInfo {
+            int currentOffset;
+            int highWater;
         };
 
         std::vector<ScopeInfo> m_scopeStack;

@@ -39,10 +39,12 @@ class cProgramNode;
 class cReturnNode;
 class cStmtNode;
 class cStmtsNode;
+class cStructDeclNode;
 class cSymbol;
 class cUnaryExprNode;
 class cVarDeclNode;
 class cVarExprNode;
+class cCallParamsNode;
 
 class cVisitor
 {
@@ -76,8 +78,10 @@ class cVisitor
         virtual void Visit(cReturnNode *node);
         virtual void Visit(cStmtNode *node);
         virtual void Visit(cStmtsNode *node);
+        virtual void Visit(cStructDeclNode *node);
         virtual void Visit(cSymbol *node);
         virtual void Visit(cUnaryExprNode *node);
         virtual void Visit(cVarDeclNode *node);
         virtual void Visit(cVarExprNode *node);
+        virtual void Visit(cCallParamsNode *node);
 };

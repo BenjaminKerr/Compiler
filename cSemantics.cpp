@@ -67,6 +67,41 @@ void cSemantics::Visit(cVarExprNode *node)
         return;
     }
 
+    // Resolve struct field access chain (e.g. aa.b.c)
+    cDeclNode *currentType = sym->GetDecl()->GetType();
+    for (int i = 1; i < node->NumChildren(); i++)
+    {
+        cSymbol *fieldSym = dynamic_cast<cSymbol*>(node->GetChild(i));
+        if (fieldSym == nullptr)
+        {
+            // Not a field symbol — must be an array subscript expr, handled below
+            break;
+        }
+
+        cStructDeclNode *structDecl = dynamic_cast<cStructDeclNode*>(currentType);
+        if (structDecl == nullptr)
+        {
+            node->SemanticError("Attempt to access field of non-struct");
+            break;
+        }
+
+        cDeclsNode *fields = structDecl->GetDecls();
+        bool found = false;
+        for (int j = 0; j < fields->NumChildren(); j++)
+        {
+            cVarDeclNode *field = dynamic_cast<cVarDeclNode*>(fields->GetChild(j));
+            if (field != nullptr && field->GetName() == fieldSym->GetName())
+            {
+                fieldSym->SetDecl(field);
+                currentType = field->GetType();
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+            node->SemanticError("Field " + fieldSym->GetName() + " not found in struct");
+    }
+
     // Children beyond index 0 are array subscripts or field accesses
     for (int i = 1; i < node->NumChildren(); i++)
     {
@@ -75,16 +110,11 @@ void cSemantics::Visit(cVarExprNode *node)
 
         if (indexExpr != nullptr)
         {
-            // Only validate the first subscript dimension against the base type.
-            // TODO: support multi-dimensional array subscript validation.
             if (i > 1) continue;
 
-            // Resolve base type: if the symbol is a var decl, get its type
             cDeclNode *baseDecl = sym->GetDecl();
             if (baseDecl != nullptr && baseDecl->IsVar())
-            {
                 baseDecl = baseDecl->GetType();
-            }
 
             if (baseDecl != nullptr && !baseDecl->IsArray())
             {
@@ -92,12 +122,10 @@ void cSemantics::Visit(cVarExprNode *node)
                 continue;
             }
 
-            // Array subscripts must be integer-typed
             cDeclNode *indexType = indexExpr->GetType();
             if (indexType != nullptr && indexType->IsFloat())
             {
-                node->SemanticError("Index of " + sym->GetName() +
-                                    " is not an int");
+                node->SemanticError("Index of " + sym->GetName() + " is not an int");
             }
         }
     }
