@@ -1,0 +1,11 @@
+// Benjamin Kerr - test08: array element as lval (store) and rval (load)
+program
+{
+    array int[3] arr;
+    arr[0] = 11;
+    arr[1] = 22;
+    arr[2] = 33;
+    print(arr[0]);
+    print(arr[1]);
+    print(arr[2]);
+}

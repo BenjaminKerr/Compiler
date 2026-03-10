@@ -26,7 +26,8 @@ void cComputeSize::Visit(cVarDeclNode *node)
 
     node->SetOffset(currentOffset);
     node->SetSize(typeSize);
-    currentOffset += typeSize;
+    // Always allocate at least 4 bytes on stack (word alignment required)
+    currentOffset += (typeSize < 4) ? 4 : typeSize;
     
     // Track high water mark
     m_scopeStack.back().highWater = std::max(m_scopeStack.back().highWater, currentOffset);
@@ -184,4 +185,16 @@ void cComputeSize::Visit(cCallParamsNode *node)
             node->SetSize((s < 4) ? 4 : s);
         }
     }
+}
+void cComputeSize::Visit(cArrayDeclNode *node)
+{
+    int typeSize = node->GetSize();  // m_count * elemSize
+    int &currentOffset = m_scopeStack.back().currentOffset;
+
+    currentOffset = AlignOffset(currentOffset, 4);
+    node->SetOffset(currentOffset);
+    // SetSize is a no-op for cArrayDeclNode; GetSize() computes it
+    currentOffset += typeSize;
+
+    m_scopeStack.back().highWater = std::max(m_scopeStack.back().highWater, currentOffset);
 }

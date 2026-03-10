@@ -133,6 +133,7 @@ class cFuncDeclNode : public cDeclNode
             return nullptr;
         }
 
+        std::string GetFuncName() { cSymbol *s = dynamic_cast<cSymbol*>(GetChild(1)); return s ? s->GetName() : ""; }
         std::string NodeType() override { return std::string("func"); }
         void Visit(cVisitor *visitor) override { visitor->Visit(this); }
 

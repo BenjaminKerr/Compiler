@@ -1,0 +1,13 @@
+// Benjamin Kerr - test05: all arithmetic operators (+, -, *, /, %)
+program
+{
+    int a;
+    int b;
+    a = 10;
+    b = 3;
+    print(a + b);
+    print(a - b);
+    print(a * b);
+    print(a / b);
+    print(a % b);
+}

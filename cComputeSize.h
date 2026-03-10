@@ -43,6 +43,7 @@ class cComputeSize : public cVisitor
         }
 
         void Visit(cVarDeclNode  *node) override;
+        void Visit(cArrayDeclNode *node) override;
         void Visit(cDeclsNode    *node) override;
         void Visit(cBlockNode    *node) override;
         void Visit(cVarExprNode  *node) override;

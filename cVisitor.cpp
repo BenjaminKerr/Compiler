@@ -47,3 +47,5 @@ void cVisitor::Visit(cUnaryExprNode *node)      { node->VisitAllChildren(this); 
 void cVisitor::Visit(cVarDeclNode *node)        { node->VisitAllChildren(this); }
 void cVisitor::Visit(cVarExprNode *node)        { node->VisitAllChildren(this); }
 void cVisitor::Visit(cCallParamsNode *node)     { node->VisitAllChildren(this); }
+void cVisitor::Visit(cIfNode *node)            { node->VisitAllChildren(this); }
+void cVisitor::Visit(cWhileNode *node)         { node->VisitAllChildren(this); }

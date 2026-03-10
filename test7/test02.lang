@@ -1,0 +1,10 @@
+// Benjamin Kerr - test02: int variable declaration, assignment, and print
+program
+{
+    int x;
+    int y;
+    x = 7;
+    y = 13;
+    print(x);
+    print(y);
+}

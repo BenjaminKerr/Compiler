@@ -21,6 +21,7 @@ COPTS=-Wall -g -c -O0 -std=c++11
 
 # Object files required to link the final compiler binary
 OBJS=main.o \
+     emit.o \
      langlex.o \
      langparse.o \
      cSymbolTable.o \

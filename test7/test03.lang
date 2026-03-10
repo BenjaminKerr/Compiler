@@ -1,0 +1,7 @@
+// Benjamin Kerr - test03: char variable declaration and assignment (byte ops)
+program
+{
+    char c;
+    c = 65;
+    print(c);
+}

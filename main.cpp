@@ -3,34 +3,24 @@
 //
 // Main function for lang compiler
 //
-// Author: Benjamin Kerr
-//
-// Date: 2025
+// Author: Phil Howard 
+// phil.howard@oit.edu
 //
 
-#include <cstdio>
-#include <cstdlib>
-#include <unistd.h> // no C++ equivalent for dup2, so we use the POSIX version
+#include <stdio.h>
+#include <stdlib.h>
 #include <iostream>
 #include <fstream>
-#include <map>
+#include "cSymbolTable.h"
 #include "lex.h"
 #include "astnodes.h"
 #include "langparse.h"
-#include "cSymbolTable.h"
-#include "cSemantics.h"
 #include "cComputeSize.h"
+#include "cBaseTypeNode.h"
+#include <map>
 
-// g_typeSymbols is defined in cSemantics.cpp and used during semantic analysis
-// to resolve type names. It mirrors entries in g_symbolTable but provides
-// direct name->symbol lookup without a full table traversal.
 extern std::map<std::string, cSymbol*> g_typeSymbols;
 
-// Global symbol table shared across all compilation phases
-cSymbolTable g_symbolTable;
-long long cSymbol::nextId = 0;
-
-// Register a built-in primitive type in both the symbol table and type map
 static void RegisterBuiltinType(const std::string &name, int size, bool isFloat)
 {
     cSymbol *sym = new cSymbol(name);
@@ -39,73 +29,76 @@ static void RegisterBuiltinType(const std::string &name, int size, bool isFloat)
     g_symbolTable.Insert(sym);
     g_typeSymbols[name] = sym;
 }
+#include "cCodeGen.h"
 
+// define global variables
+cSymbolTable g_symbolTable;
+long long cSymbol::nextId;
+
+// takes two string args: input_file, and output_file
 int main(int argc, char **argv)
 {
-    const char *outfile_name;
+    std::cout << "Philip Howard" << std::endl;
+
+    std::string outfile_name;
     int result = 0;
 
-    // Redirect stdin to source file if provided
     if (argc > 1)
     {
         yyin = fopen(argv[1], "r");
         if (yyin == nullptr)
         {
             std::cerr << "ERROR: Unable to open file " << argv[1] << "\n";
-            return 1;
+            exit(-1);
         }
     }
 
-    // Redirect stdout to output file if provided, using dup2 to ensure that
-    // any code writing to fd 1 (including bison/flex internals) goes to the file
     if (argc > 2)
     {
         outfile_name = argv[2];
-        FILE *output = fopen(outfile_name, "w");
-        if (output == nullptr)
-        {
-            std::cerr << "Unable to open output file " << outfile_name << "\n";
-            return 1;
-        }
-        int output_fd = fileno(output);
-        if (dup2(output_fd, 1) != 1)
-        {
-            std::cerr << "Unable to configure output stream\n";
-            return 1;
-        }
+    } else {
+        outfile_name = "langout";
     }
 
-    // Register all built-in primitive types before parsing begins
-    RegisterBuiltinType("char",   1, false);
-    RegisterBuiltinType("int",    4, false);
-    RegisterBuiltinType("float",  8, true);
 
+    RegisterBuiltinType("char",  1, false);
+    RegisterBuiltinType("int",   4, false);
+    RegisterBuiltinType("float", 8, true);
     result = yyparse();
-
-    if (yyast_root != nullptr && result == 0)
+    if (yyast_root != nullptr)
     {
-        // Run semantic analysis pass (type checking, symbol resolution)
-        cSemantics semantics;
-        semantics.VisitAllNodes(yyast_root);
-
-        result += yynerrs;
-
         if (result == 0)
         {
-            // Run size/offset computation pass for memory layout
-            cComputeSize sizer;
-            sizer.VisitAllNodes(yyast_root);
+            // NOTE: we should run the semantic error checker here,
+            // but not everyone got it to work, so we'll skip it.
+            // If yours works, feel free to include it
+            //
+            // cSemantic semantics;
+            // semantics.VisitAllNodes(yyast_root);
+            // result += semantics.NumErrors();
+            //
+            if (result == 0)
+            {
+                cComputeSize sizer;
+                sizer.VisitAllNodes(yyast_root);
 
-            std::cout << yyast_root->ToString() << std::endl;
+                // need to make the coder go out of scope before assembling
+                {
+                    cCodeGen coder(outfile_name + ".sl");
+                    coder.VisitAllNodes(yyast_root);
+                }
+
+                string cmd = "slasm " + outfile_name + ".sl io320.sl";
+                system(cmd.c_str());
+            }
+        } 
+
+        if (result != 0)
+        {
+            std::cerr << yynerrs << " Errors in compile\n";
         }
     }
 
-    if (yynerrs != 0)
-    {
-        std::cout << yynerrs << " Errors in compile\n";
-    }
-
-    // Call yylex() one more time to check for unconsumed tokens after parse
     if (result == 0 && yylex() != 0)
     {
         std::cerr << "Junk at end of program\n";

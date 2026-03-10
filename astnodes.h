@@ -38,3 +38,5 @@
 #include "cUnaryExprNode.h"
 #include "cArrayDeclNode.h"
 #include "cCallParamsNode.h"
+#include "cIfNode.h"
+#include "cWhileNode.h"

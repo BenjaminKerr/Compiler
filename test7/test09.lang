@@ -1,0 +1,11 @@
+// Benjamin Kerr - test09: function declaration and call with no parameters
+program
+{
+    int getVal()
+    {
+        return 99;
+    }
+    int v;
+    v = getVal();
+    print(v);
+}

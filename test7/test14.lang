@@ -1,0 +1,17 @@
+// Benjamin Kerr - test14: if-else with both branches exercised
+program
+{
+    int x;
+    x = 7;
+    if (x > 5)
+        print(1);
+    else
+        print(2);
+    endif;
+    x = 3;
+    if (x > 5)
+        print(3);
+    else
+        print(4);
+    endif;
+}

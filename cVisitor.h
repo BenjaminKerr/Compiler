@@ -45,6 +45,8 @@ class cUnaryExprNode;
 class cVarDeclNode;
 class cVarExprNode;
 class cCallParamsNode;
+class cIfNode;
+class cWhileNode;
 
 class cVisitor
 {
@@ -84,4 +86,6 @@ class cVisitor
         virtual void Visit(cVarDeclNode *node);
         virtual void Visit(cVarExprNode *node);
         virtual void Visit(cCallParamsNode *node);
+        virtual void Visit(cIfNode *node);
+        virtual void Visit(cWhileNode *node);
 };

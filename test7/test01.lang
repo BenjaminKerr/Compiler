@@ -1,0 +1,7 @@
+// Benjamin Kerr - test01: print integer literals (basic sanity check)
+program
+{
+    print(1);
+    print(2);
+    print(42);
+}

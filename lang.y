@@ -23,6 +23,8 @@
 #include <iostream>
 #include "lex.h"
 #include "astnodes.h"
+#include "cIfNode.h"
+#include "cWhileNode.h"
 
 // Tracks whether a semantic error occurred during the current grammar rule.
 // Bison's yynerrs counts parse errors; this flag lets us detect semantic
@@ -172,7 +174,10 @@ struct_decl:  STRUCT open decls close IDENTIFIER
                 { $$ = new cStructDeclNode($3, $5); CHECK_ERROR(); }
 
 array_decl:   ARRAY TYPE_ID '[' INT_VAL ']' IDENTIFIER
-                                { $$ = new cArrayDeclNode($2, $4, $6); }
+                                {
+                                    g_symbolTable.Insert($6);
+                                    $$ = new cArrayDeclNode($2, $4, $6);
+                                }
 
 func_decl:  func_header ';'
                                 {
@@ -238,11 +243,11 @@ stmts:      stmts stmt
                                 { $$ = new cStmtsNode((cStmtNode*)$1); }
 
 stmt:       IF '(' expr ')' stmts ENDIF ';'
-                                { $$ = nullptr; /* TODO: implement if statement */ }
+                                { $$ = new cIfNode($3, $5, nullptr); }
         |   IF '(' expr ')' stmts ELSE stmts ENDIF ';'
-                                { $$ = nullptr; /* TODO: implement if/else statement */ }
+                                { $$ = new cIfNode($3, $5, $7); }
         |   WHILE '(' expr ')' stmt
-                                { $$ = nullptr; /* TODO: implement while statement */ }
+                                { $$ = new cWhileNode($3, (cStmtNode*)$5); }
         |   PRINT '(' expr ')' ';'
                                 { $$ = new cPrintNode($3); }
         |   PRINTS '(' STRING_LIT ')' ';'

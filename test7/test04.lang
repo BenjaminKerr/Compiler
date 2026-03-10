@@ -1,0 +1,13 @@
+// Benjamin Kerr - test04: char byte store/load distinct from int word store/load
+program
+{
+    char a;
+    char b;
+    int  n;
+    a = 10;
+    b = 20;
+    n = 300;
+    print(a);
+    print(b);
+    print(n);
+}

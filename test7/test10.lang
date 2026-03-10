@@ -1,0 +1,12 @@
+// Benjamin Kerr - test10: function call with integer parameters
+program
+{
+    int add(int a, int b)
+    {
+        return a + b;
+    }
+    int result;
+    result = add(3, 4);
+    print(result);
+    print(add(10, 20));
+}

@@ -1,0 +1,15 @@
+// Benjamin Kerr - test11: function return values used in expressions and nested calls
+program
+{
+    int double(int x)
+    {
+        return x * 2;
+    }
+    int square(int x)
+    {
+        return x * x;
+    }
+    print(double(5));
+    print(square(4));
+    print(double(square(3)));
+}

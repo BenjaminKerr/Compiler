@@ -24,7 +24,7 @@ class cArrayDeclNode : public cDeclNode
 
         int GetCount() { return m_count; }
 
-        virtual bool IsType() { return true; }
+        virtual bool IsType() { return false; }
 
         virtual bool IsArray() { return true; }
 
