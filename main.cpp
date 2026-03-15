@@ -62,9 +62,16 @@ int main(int argc, char **argv)
     }
 
 
-    RegisterBuiltinType("char",  1, false);
-    RegisterBuiltinType("int",   4, false);
-    RegisterBuiltinType("float", 8, true);
+    RegisterBuiltinType("char",   1, false);
+    RegisterBuiltinType("int",    4, false);
+    RegisterBuiltinType("float",  8, true);
+
+    cSymbol *longSym = new cSymbol("long");
+    g_symbolTable.Insert(longSym);
+
+    cSymbol *doubleSym = new cSymbol("double");
+    g_symbolTable.Insert(doubleSym);
+
     result = yyparse();
     if (yyast_root != nullptr)
     {

@@ -164,7 +164,16 @@ decl:       var_decl ';'
 
 var_decl: TYPE_ID IDENTIFIER
     {
-        $$ = new cVarDeclNode($1, $2);
+        // If this name already exists in the current (local) scope, reuse it.
+        // If it only exists in an outer scope (shadowing), create a fresh symbol
+        // so the inner declaration gets a distinct identity.
+        cSymbol *sym = g_symbolTable.FindLocal($2->GetName());
+        if (sym == nullptr)
+        {
+            sym = new cSymbol($2->GetName());
+            g_symbolTable.Insert(sym);
+        }
+        $$ = new cVarDeclNode($1, sym);
         CHECK_ERROR();
     }
 

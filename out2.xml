@@ -4,13 +4,13 @@
     <decls>
       <var_decl>
         <sym id="2" name="int"/>
-        <sym id="4" name="val"/>
+        <sym id="6" name="val"/>
       </var_decl>
     </decls>
     <stmts>
       <assign>
         <varref>
-          <sym id="4" name="val"/>
+          <sym id="6" name="val"/>
         </varref>
         <expr>
           <expr>
@@ -24,7 +24,7 @@
       </assign>
       <assign>
         <varref>
-          <sym id="4" name="val"/>
+          <sym id="6" name="val"/>
         </varref>
         <expr>
           <expr>
@@ -50,7 +50,7 @@
       </assign>
       <assign>
         <varref>
-          <sym id="4" name="val"/>
+          <sym id="6" name="val"/>
         </varref>
         <expr>
           <expr>
@@ -88,7 +88,7 @@
       </assign>
       <assign>
         <varref>
-          <sym id="4" name="val"/>
+          <sym id="6" name="val"/>
         </varref>
         <expr>
           <expr>
@@ -106,7 +106,7 @@
       </assign>
       <assign>
         <varref>
-          <sym id="4" name="val"/>
+          <sym id="6" name="val"/>
         </varref>
         <expr>
           <expr>
@@ -124,7 +124,7 @@
       </assign>
       <assign>
         <varref>
-          <sym id="4" name="val"/>
+          <sym id="6" name="val"/>
         </varref>
         <expr>
           <expr>
@@ -142,7 +142,7 @@
       </assign>
       <assign>
         <varref>
-          <sym id="4" name="val"/>
+          <sym id="6" name="val"/>
         </varref>
         <expr>
           <expr>
@@ -160,7 +160,7 @@
       </assign>
       <assign>
         <varref>
-          <sym id="4" name="val"/>
+          <sym id="6" name="val"/>
         </varref>
         <expr>
           <expr>
@@ -178,7 +178,7 @@
       </assign>
       <assign>
         <varref>
-          <sym id="4" name="val"/>
+          <sym id="6" name="val"/>
         </varref>
         <expr>
           <expr>
