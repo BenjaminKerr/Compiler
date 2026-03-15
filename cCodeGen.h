@@ -234,7 +234,7 @@ class cCodeGen : public cVisitor
             }
             else
             {
-                EmitString("RETURNV\n");
+                EmitString("RETURN\n");
             }
         }
 
@@ -263,8 +263,8 @@ class cCodeGen : public cVisitor
                     node->GetChild(i)->Visit(this);
             }
 
-            // Safety RETURNV in case no explicit return (avoids fall-off)
-            EmitString("RETURNV\n");
+            // Safety RETURN in case no explicit return (avoids fall-off)
+            EmitString("RETURN\n");
         }
 
         //------------------------------------------------------------------

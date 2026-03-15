@@ -58,7 +58,7 @@ class cVarExprNode : public cExprNode
         virtual string AttributesToString()
         {
             string result = "";
-            if (NumChildren() > 0)
+            if (m_size != 0 || m_offset != 0)
             {
                 result += " size=\"" + std::to_string(m_size) + "\"";
                 result += " offset=\"" + std::to_string(m_offset) + "\"";
@@ -67,7 +67,7 @@ class cVarExprNode : public cExprNode
                     result += " rowsizes=\"";
                     for (size_t i = 0; i < m_rowsizes.size(); i++)
                     {
-                        if (i > 0) result += " ";
+                        if (i > 0) result += ",";
                         result += std::to_string(m_rowsizes[i]);
                     }
                     result += "\"";

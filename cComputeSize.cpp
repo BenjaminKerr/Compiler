@@ -120,11 +120,11 @@ void cComputeSize::Visit(cFuncDeclNode *node)
                 int slotSize = GetParamSlotSize(varDecl->GetType());
                 varDecl->SetOffset(paramOffset);
                 varDecl->SetSize((varDecl->GetType() != nullptr)
-                                  ? varDecl->GetType()->GetSize() : 1);
+                                ? varDecl->GetType()->GetSize() : 1);
                 paramOffset -= slotSize;
             }
-        params->SetSize(-paramOffset - 12);
         }
+    params->SetSize(-paramOffset - 12);  // ← after loop
     }
 
     // Push a fresh scope for the function body's local variables
@@ -143,7 +143,6 @@ void cComputeSize::Visit(cFuncDeclNode *node)
 
 void cComputeSize::Visit(cParamsNode *node)
 {
-    fprintf(stderr, "DEBUG Visit(cParamsNode) called\n");
     int total = 0;
     for (int i = 0; i < node->NumChildren(); i++)
     {

@@ -2025,7 +2025,7 @@ void yyfree (void * ptr )
 
 
 int Process_ID(const char *id) {
-    // Check if this is a predefined type
+    // Check if this is a predefined builtin type (char, int, float)
     auto it = g_typeSymbols.find(id);
     if (it != g_typeSymbols.end()) {
         yylval.symbol = it->second;
@@ -2036,7 +2036,13 @@ int Process_ID(const char *id) {
     cSymbol *sym = g_symbolTable.Find(id);
     if (sym != nullptr) {
         yylval.symbol = sym;
-        if (sym->GetDecl() != nullptr && sym->GetDecl()->IsType()) {
+        // Arrays and structs are types for declaration purposes,
+        // but not when used as variable references — exclude IsArray()
+        // so that array variable names come back as IDENTIFIER
+        if (sym->GetDecl() != nullptr && 
+            sym->GetDecl()->IsType() && 
+            !sym->GetDecl()->IsArray())
+        {
             return TYPE_ID;
         }
         return IDENTIFIER;

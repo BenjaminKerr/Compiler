@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
+#include <unistd.h>
 #include <fstream>
 #include "cSymbolTable.h"
 #include "lex.h"
@@ -69,29 +70,40 @@ int main(int argc, char **argv)
     {
         if (result == 0)
         {
-            // NOTE: we should run the semantic error checker here,
-            // but not everyone got it to work, so we'll skip it.
-            // If yours works, feel free to include it
-            //
-            // cSemantic semantics;
-            // semantics.VisitAllNodes(yyast_root);
-            // result += semantics.NumErrors();
-            //
-            if (result == 0)
+            if (outfile_name.size() >= 4 &&
+                outfile_name.substr(outfile_name.size() - 4) == ".xml")
             {
+                // Labs 1-6 mode: redirect stdout to output file, dump AST as XML
+                FILE *output = fopen(outfile_name.c_str(), "w");
+                if (output == nullptr)
+                {
+                    std::cerr << "ERROR: Unable to open output file "
+                            << outfile_name << "\n";
+                    exit(-1);
+                }
+                int output_fd = fileno(output);
+                if (dup2(output_fd, 1) != 1)
+                {
+                    std::cerr << "ERROR: Unable to configure output stream\n";
+                    exit(-1);
+                }
+                std::cout << yyast_root->ToString();
+            }
+            else
+            {
+                // Lab 7+ mode: run compute size and codegen
                 cComputeSize sizer;
                 sizer.VisitAllNodes(yyast_root);
 
-                // need to make the coder go out of scope before assembling
                 {
                     cCodeGen coder(outfile_name + ".sl");
                     coder.VisitAllNodes(yyast_root);
                 }
 
-                string cmd = "slasm " + outfile_name + ".sl io320.sl";
+                std::string cmd = "slasm " + outfile_name + ".sl io320.sl";
                 system(cmd.c_str());
             }
-        } 
+        }
 
         if (result != 0)
         {

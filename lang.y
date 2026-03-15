@@ -164,9 +164,7 @@ decl:       var_decl ';'
 
 var_decl: TYPE_ID IDENTIFIER
     {
-        cSymbol* fresh = new cSymbol($2->GetName());
-        g_symbolTable.Insert(fresh);
-        $$ = new cVarDeclNode($1, fresh);
+        $$ = new cVarDeclNode($1, $2);
         CHECK_ERROR();
     }
 
@@ -174,10 +172,9 @@ struct_decl:  STRUCT open decls close IDENTIFIER
                 { $$ = new cStructDeclNode($3, $5); CHECK_ERROR(); }
 
 array_decl:   ARRAY TYPE_ID '[' INT_VAL ']' IDENTIFIER
-                                {
-                                    g_symbolTable.Insert($6);
-                                    $$ = new cArrayDeclNode($2, $4, $6);
-                                }
+                {
+                    $$ = new cArrayDeclNode($2, $4, $6);
+                }
 
 func_decl:  func_header ';'
                                 {
@@ -255,7 +252,7 @@ stmt:       IF '(' expr ')' stmts ENDIF ';'
         |   lval '=' expr ';'
                                 { $$ = new cAssignNode($1, $3); }
         |   func_call ';'
-                                { $$ = nullptr; /* function called for side effects only */ }
+                                { $$ = $1;  }
         |   block
                                 { $$ = $1; }
         |   RETURN expr ';'
